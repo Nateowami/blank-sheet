@@ -9,6 +9,8 @@ import json
 
 WORD_SCORE_BASE = 0.9
 SUBWORD_CONTINUATION_DISCOUNT = 0.98
+SUBWORD_SPLIT_THRESHOLD = 6
+MIN_SUBWORD_SPLIT_POSITION = 3
 
 
 @dataclass
@@ -114,7 +116,7 @@ def _segment_confidences(graph: TokenGraph, token_joiner: str = " ") -> Tuple[Li
     word_scores = []
     for w in words:
         ratio = len(w) / total_chars
-        word_scores.append(max(0.0, min(1.0, avg * (WORD_SCORE_BASE + ratio))))
+        word_scores.append(max(0.0, min(1.0, avg * WORD_SCORE_BASE * (1.0 + ratio))))
     return words, word_scores
 
 
@@ -228,8 +230,8 @@ class TinySecondaryAdapter(BaseModelAdapter):
             words = candidate_text.split()
             subword_tokens: List[TokenWeight] = []
             for word in words:
-                if len(word) > 6:
-                    split = max(3, len(word) // 2)
+                if len(word) > SUBWORD_SPLIT_THRESHOLD:
+                    split = max(MIN_SUBWORD_SPLIT_POSITION, len(word) // 2)
                     first = "▁" + word[:split]
                     second = word[split:]
                     subword_tokens.append(TokenWeight(token=first, probability=path_prob))
@@ -261,8 +263,8 @@ def _context_options(text: str, context_before: str) -> Dict[str, List[Tuple[str
             "secondary": [("The fish was huge", 0.74), ("The bass was huge", 0.22)],
         }
     return {
-        "primary": [(text, 0.61), (text, 0.3)],
-        "secondary": [(text, 0.58), (text, 0.24)],
+        "primary": [(text, 0.61), (f"{text} indeed", 0.3)],
+        "secondary": [(text, 0.58), (f"{text} truly", 0.24)],
     }
 
 
