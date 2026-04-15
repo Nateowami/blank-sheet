@@ -163,12 +163,14 @@ def _build_adapters(args: argparse.Namespace):
             model_path=gguf_path,
             n_gpu_layers=args.llamacpp_n_gpu_layers,
             chat_format=args.llamacpp_chat_format,
+            verbose=args.verbose,
         )
     elif args.secondary_llamacpp_model:
         secondary = LlamaCppTranslateGemmaAdapter(
             model_path=args.secondary_llamacpp_model,
             n_gpu_layers=args.llamacpp_n_gpu_layers,
             chat_format=args.llamacpp_chat_format,
+            verbose=args.verbose,
         )
     elif args.secondary_ollama_model:
         secondary = OllamaTranslateGemmaAdapter(
