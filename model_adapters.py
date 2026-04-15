@@ -751,9 +751,6 @@ class LlamaCppTranslateGemmaAdapter(BaseModelAdapter):
     behaviour for Ollama-sourced GGUFs.  Pass an explicit string (e.g.
     ``"gemma"``, ``"chatml"``) only if auto-detection gives wrong results.
 
-    ``logits_all=True`` is passed automatically so that per-token logprobs
-    are available during ``create_chat_completion``.
-
     When ``verbose=True`` the underlying llama.cpp library writes its
     diagnostic messages (model loading, GPU offload stats, …) to stderr,
     which is useful for debugging initialisation failures.
@@ -801,7 +798,6 @@ class LlamaCppTranslateGemmaAdapter(BaseModelAdapter):
             model_path=self._model_path,
             n_ctx=self._n_ctx,
             n_gpu_layers=self._n_gpu_layers,
-            logits_all=True,
             chat_format=self._chat_format,
             verbose=self._verbose,
         )
