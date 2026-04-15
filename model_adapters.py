@@ -85,15 +85,21 @@ class NLLBAdapter(BaseModelAdapter):
             return
 
         import torch
-        from transformers import AutoModelForSeq2SeqLM, NllbTokenizer
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
         if self._device is None:
             self._device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Loading NLLB model %s on %s …", self._model_name, self._device)
-        self._tokenizer = NllbTokenizer.from_pretrained(self._model_name)
-        self._model = AutoModelForSeq2SeqLM.from_pretrained(self._model_name)
+        # AutoTokenizer returns NllbTokenizerFast in transformers 5.x, which is
+        # better maintained than the legacy slow NllbTokenizer.
+        self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
+        # Load model directly onto the target device to avoid a CPU→GPU copy
+        # that would double peak memory usage.
+        self._model = AutoModelForSeq2SeqLM.from_pretrained(
+            self._model_name,
+            device_map=self._device,
+        )
         self._model.eval()
-        self._model.to(self._device)
         logger.info("NLLB model loaded.")
 
     # ------------------------------------------------------------------
@@ -116,7 +122,10 @@ class NLLBAdapter(BaseModelAdapter):
         # NLLB does not use context_before; it translates one sentence at a time.
         self._tokenizer.src_lang = source_lang
         inputs = self._tokenizer(text, return_tensors="pt").to(self._device)
-        forced_bos_token_id = self._tokenizer.lang_code_to_id[target_lang]
+        # NllbTokenizerFast (returned by AutoTokenizer) does not expose
+        # lang_code_to_id; use convert_tokens_to_ids which works for both the
+        # fast and slow variants.
+        forced_bos_token_id = self._tokenizer.convert_tokens_to_ids(target_lang)
 
         with torch.no_grad():
             outputs = self._model.generate(
@@ -137,11 +146,26 @@ class NLLBAdapter(BaseModelAdapter):
         )
         token_probs = torch.exp(transition_scores)  # (num_seqs, gen_len)
 
-        # Normalise overall sequence scores to [0, 1] across beams
-        seq_scores = outputs.sequences_scores.float()
-        path_probs_tensor = torch.softmax(seq_scores, dim=0)
+        # Normalise overall sequence scores to [0, 1] across beams.
+        # sequences_scores is present for beam search with return_dict_in_generate=True.
+        raw_seq_scores = getattr(outputs, "sequences_scores", None)
+        if raw_seq_scores is not None:
+            seq_scores = raw_seq_scores.float()
+            path_probs_tensor = torch.softmax(seq_scores, dim=0)
+        else:
+            # Fallback: uniform distribution across returned sequences
+            n = outputs.sequences.shape[0]
+            path_probs_tensor = torch.full((n,), 1.0 / n)
 
         paths: List[CandidatePath] = []
+        # Build the set of special token IDs that terminate generation so the
+        # token loop works correctly even when eos_token_id is a list.
+        eos_id = self._tokenizer.eos_token_id
+        eos_id_set: set = set(eos_id) if isinstance(eos_id, (list, tuple)) else {eos_id}
+        pad_id = self._tokenizer.pad_token_id
+        if pad_id is not None:
+            eos_id_set.add(pad_id)
+
         for seq_idx in range(outputs.sequences.shape[0]):
             path_prob = float(path_probs_tensor[seq_idx])
             if path_prob < min_path_probability:
@@ -158,10 +182,7 @@ class NLLBAdapter(BaseModelAdapter):
 
             token_weights: List[TokenWeight] = []
             for tok_id, prob in zip(gen_token_ids, per_tok_probs):
-                if tok_id in (
-                    self._tokenizer.eos_token_id,
-                    self._tokenizer.pad_token_id,
-                ):
+                if tok_id in eos_id_set:
                     break
                 tok_str = self._tokenizer.convert_ids_to_tokens(tok_id)
                 if tok_str is None:
@@ -254,12 +275,14 @@ class TranslateGemmaAdapter(BaseModelAdapter):
             "Loading TranslateGemma model %s on %s …", self._model_name, self._device
         )
         self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
+        # Load model directly onto the target device to avoid a CPU→GPU copy
+        # that would double peak memory usage when NLLB is already on GPU.
         self._model = AutoModelForCausalLM.from_pretrained(
             self._model_name,
             torch_dtype="auto",
+            device_map=self._device,
         )
         self._model.eval()
-        self._model.to(self._device)
         logger.info("TranslateGemma model loaded.")
 
     # ------------------------------------------------------------------
@@ -309,6 +332,16 @@ class TranslateGemmaAdapter(BaseModelAdapter):
         inputs = self._tokenizer(prompt, return_tensors="pt").to(self._device)
         prompt_len = inputs.input_ids.shape[1]
 
+        # Build a flat list of EOS token IDs.
+        # self._tokenizer.eos_token_id may be an int *or* a list for
+        # instruction-tuned models (e.g. Gemma-IT sets it to [1, 107]).
+        base_eos = self._tokenizer.eos_token_id
+        eos_ids: List[int] = list(base_eos) if isinstance(base_eos, (list, tuple)) else [base_eos]
+        # Also stop at the first newline to avoid multi-sentence outputs.
+        nl_token_ids = self._tokenizer.encode("\n", add_special_tokens=False)
+        if nl_token_ids:
+            eos_ids = list(dict.fromkeys(eos_ids + nl_token_ids[:1]))  # dedup, preserve order
+
         with torch.no_grad():
             outputs = self._model.generate(
                 **inputs,
@@ -318,11 +351,7 @@ class TranslateGemmaAdapter(BaseModelAdapter):
                 return_dict_in_generate=True,
                 max_new_tokens=128,
                 early_stopping=True,
-                # Stop at newline so we don't generate more than one sentence
-                eos_token_id=[
-                    self._tokenizer.eos_token_id,
-                    self._tokenizer.encode("\n", add_special_tokens=False)[0],
-                ],
+                eos_token_id=eos_ids,
             )
 
         beam_indices = getattr(outputs, "beam_indices", None)
@@ -331,8 +360,21 @@ class TranslateGemmaAdapter(BaseModelAdapter):
         )
         token_probs = torch.exp(transition_scores)  # (num_seqs, new_len)
 
-        seq_scores = outputs.sequences_scores.float()
-        path_probs_tensor = torch.softmax(seq_scores, dim=0)
+        # sequences_scores is present for beam search with return_dict_in_generate=True.
+        raw_seq_scores = getattr(outputs, "sequences_scores", None)
+        if raw_seq_scores is not None:
+            seq_scores = raw_seq_scores.float()
+            path_probs_tensor = torch.softmax(seq_scores, dim=0)
+        else:
+            n = outputs.sequences.shape[0]
+            path_probs_tensor = torch.full((n,), 1.0 / n)
+
+        # Collect the set of token IDs that signal end-of-sequence so we can
+        # stop the token loop correctly even when eos_token_id is a list.
+        eos_id_set = set(eos_ids)
+        pad_id = self._tokenizer.pad_token_id
+        if pad_id is not None:
+            eos_id_set.add(pad_id)
 
         paths: List[CandidatePath] = []
         for seq_idx in range(outputs.sequences.shape[0]):
@@ -347,10 +389,7 @@ class TranslateGemmaAdapter(BaseModelAdapter):
 
             token_weights: List[TokenWeight] = []
             for tok_id, prob in zip(gen_token_ids, per_tok_probs):
-                if tok_id in (
-                    self._tokenizer.eos_token_id,
-                    self._tokenizer.pad_token_id,
-                ):
+                if tok_id in eos_id_set:
                     break
                 tok_str = self._tokenizer.convert_ids_to_tokens(tok_id)
                 if tok_str is None:
