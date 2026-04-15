@@ -517,7 +517,7 @@ def _context_options(
         }
 
     # --- planta (Spanish): sole of foot vs ground floor ---
-    if any(k in ctx for k in ("caminar", "sendeross", "kilómetros", "pie", "montaña", "hiking", "walk", "sendero")):
+    if any(k in ctx for k in ("caminar", "senderos", "kilómetros", "pie", "montaña", "hiking", "walk", "sendero")):
         return {
             "primary": [
                 ("The soles of her feet hurt after walking so much.", 0.66),
