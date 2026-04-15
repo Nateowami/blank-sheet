@@ -1,9 +1,10 @@
 import unittest
+from typing import List
 
 from translation_fusion import CandidatePath, TokenGraph, TokenWeight, merge_graphs
 
 
-def _graph(model: str, tokens, path_probability=0.8) -> TokenGraph:
+def _graph(model: str, tokens: List[str], path_probability: float = 0.8) -> TokenGraph:
     return TokenGraph(
         model_name=model,
         best_text="",

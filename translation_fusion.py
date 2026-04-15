@@ -7,6 +7,9 @@ from statistics import mean
 from typing import Dict, Iterable, List, Sequence, Tuple
 import json
 
+WORD_SCORE_BASE = 0.9
+SUBWORD_CONTINUATION_DISCOUNT = 0.98
+
 
 @dataclass
 class TokenWeight:
@@ -111,7 +114,7 @@ def _segment_confidences(graph: TokenGraph, token_joiner: str = " ") -> Tuple[Li
     word_scores = []
     for w in words:
         ratio = len(w) / total_chars
-        word_scores.append(max(0.0, min(1.0, avg * (0.9 + ratio))))
+        word_scores.append(max(0.0, min(1.0, avg * (WORD_SCORE_BASE + ratio))))
     return words, word_scores
 
 
@@ -231,7 +234,9 @@ class TinySecondaryAdapter(BaseModelAdapter):
                     second = word[split:]
                     subword_tokens.append(TokenWeight(token=first, probability=path_prob))
                     if second:
-                        subword_tokens.append(TokenWeight(token=second, probability=path_prob * 0.98))
+                        subword_tokens.append(
+                            TokenWeight(token=second, probability=path_prob * SUBWORD_CONTINUATION_DISCOUNT)
+                        )
                 else:
                     subword_tokens.append(TokenWeight(token="▁" + word, probability=path_prob))
             paths.append(CandidatePath(token_weights=subword_tokens, path_probability=path_prob))
