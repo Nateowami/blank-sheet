@@ -460,7 +460,7 @@ def _context_options(
         }
 
     # --- avocat: lawyer (court) vs avocado (food) ---
-    if any(k in ctx for k in ("procès", "tribunal", "jugement", "cour ", "juge", "témoin")):
+    if any(k in ctx for k in ("procès", "tribunal", "jugement", "cour", "juge", "témoin")):
         return {
             "primary": [
                 ("My lawyer advised me not to testify.", 0.70),
@@ -543,7 +543,7 @@ def _context_options(
                 ("The miners decided to strike after negotiations failed.", 0.22),
             ],
         }
-    if any(k in ctx for k in ("vacances", "mer ", "chalet", "bord de mer", "coucher", "sunset", "sea")):
+    if any(k in ctx for k in ("vacances", "mer", "chalet", "bord de mer", "coucher", "sunset", "sea")):
         return {
             "primary": [
                 ("We walked along the beach at sunset.", 0.64),
