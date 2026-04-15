@@ -27,6 +27,26 @@ pip install -r requirements.txt
 
 ## Run with real models
 
+### Option A — Ollama (recommended, no HuggingFace token required)
+
+Install [Ollama](https://ollama.com), pull a compatible TranslateGemma GGUF,
+then run:
+
+```bash
+ollama pull translategemma   # or whatever model name you imported
+python run_experiment.py \
+  --primary-model facebook/nllb-200-distilled-600M \
+  --secondary-ollama-model translategemma \
+  --primary-weight 0.6 \
+  --secondary-weight 0.4 \
+  --verbose
+```
+
+The `--ollama-host` flag (default: `http://localhost:11434`) lets you point at a
+remote Ollama server.
+
+### Option B — HuggingFace (loads weights into Python memory)
+
 `google/translategemma-4b-it` is a gated model.  Before running, you must:
 
 1. Accept Google's licence at <https://huggingface.co/google/translategemma-4b-it>

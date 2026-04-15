@@ -67,6 +67,23 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--secondary-ollama-model",
+        type=str,
+        default=None,
+        help=(
+            "Ollama model name for the secondary model. "
+            "Example: translategemma. "
+            "Requires an Ollama server to be running (see --ollama-host). "
+            "Takes precedence over --secondary-model when both are provided."
+        ),
+    )
+    parser.add_argument(
+        "--ollama-host",
+        type=str,
+        default="http://localhost:11434",
+        help="Base URL of the Ollama server (default: http://localhost:11434).",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default=None,
@@ -85,6 +102,7 @@ def _build_adapters(args: argparse.Namespace):
     """Construct primary and secondary adapters based on CLI arguments."""
     from model_adapters import (
         NLLBAdapter,
+        OllamaTranslateGemmaAdapter,
         TranslateGemmaAdapter,
         TinyPrimaryAdapter,
         TinySecondaryAdapter,
@@ -95,11 +113,15 @@ def _build_adapters(args: argparse.Namespace):
         if args.primary_model
         else TinyPrimaryAdapter()
     )
-    secondary = (
-        TranslateGemmaAdapter(model_name=args.secondary_model, device=args.device)
-        if args.secondary_model
-        else TinySecondaryAdapter()
-    )
+    if args.secondary_ollama_model:
+        secondary = OllamaTranslateGemmaAdapter(
+            model_name=args.secondary_ollama_model,
+            host=args.ollama_host,
+        )
+    elif args.secondary_model:
+        secondary = TranslateGemmaAdapter(model_name=args.secondary_model, device=args.device)
+    else:
+        secondary = TinySecondaryAdapter()
     return primary, secondary
 
 

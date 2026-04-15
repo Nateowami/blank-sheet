@@ -1,5 +1,6 @@
 import unittest
 from typing import List
+from unittest.mock import MagicMock, patch
 
 from translation_fusion import CandidatePath, TokenGraph, TokenWeight, merge_graphs
 
@@ -163,6 +164,101 @@ class TestRunExperimentRows(unittest.TestCase):
             self.assertIn("final", s)
             self.assertIn("impact_report", s)
             self.assertIn("source_lang", s)
+
+
+class TestOllamaTranslateGemmaAdapter(unittest.TestCase):
+    """Tests for OllamaTranslateGemmaAdapter using a mocked Ollama client."""
+
+    def _make_logprob(self, token: str, logprob: float):
+        lp = MagicMock()
+        lp.token = token
+        lp.logprob = logprob
+        return lp
+
+    def _make_response(self, content: str, logprobs=None):
+        resp = MagicMock()
+        resp.message.content = content
+        resp.logprobs = logprobs
+        return resp
+
+    def _make_adapter(self):
+        from model_adapters import OllamaTranslateGemmaAdapter
+        adapter = OllamaTranslateGemmaAdapter(model_name="translategemma")
+        adapter._client = MagicMock()
+        return adapter
+
+    def test_builds_graph_from_logprobs(self):
+        adapter = self._make_adapter()
+        lps = [
+            self._make_logprob("The", -0.1),
+            self._make_logprob(" chef", -0.2),
+            self._make_logprob(" cooked", -0.3),
+            self._make_logprob(" lobster", -0.15),
+        ]
+        adapter._client.chat.return_value = self._make_response(
+            "The chef cooked lobster", lps
+        )
+        graph = adapter.build_token_graph(
+            text="El chef cocinó langosta",
+            context_before="restaurante de mariscos",
+            source_lang="spa_Latn",
+            target_lang="eng_Latn",
+            top_k_paths=1,
+        )
+        self.assertIsInstance(graph, TokenGraph)
+        self.assertTrue(graph.paths)
+        self.assertIn("lobster", graph.best_text.lower())
+
+    def test_fallback_without_logprobs(self):
+        """When Ollama returns no logprobs, the adapter falls back to uniform confidence."""
+        adapter = self._make_adapter()
+        adapter._client.chat.return_value = self._make_response(
+            "The lawyer advised me", logprobs=None
+        )
+        graph = adapter.build_token_graph(
+            text="Mon avocat m'a conseillé",
+            context_before="le procès avait commencé",
+            source_lang="fra_Latn",
+            target_lang="eng_Latn",
+            top_k_paths=1,
+        )
+        self.assertIsInstance(graph, TokenGraph)
+        self.assertTrue(graph.paths)
+        tokens = " ".join(tw.token for tw in graph.paths[0].token_weights)
+        self.assertIn("lawyer", tokens.lower())
+
+    def test_multiple_paths_normalised(self):
+        """Multiple responses produce paths whose probabilities sum to ~1."""
+        import math
+
+        adapter = self._make_adapter()
+
+        def _make_resp(word: str, score: float):
+            lps = [self._make_logprob(word, score)]
+            return self._make_response(word, lps)
+
+        adapter._client.chat.side_effect = [
+            _make_resp("locusts", -0.1),
+            _make_resp("lobsters", -1.5),
+        ]
+        graph = adapter.build_token_graph(
+            text="una plaga de langostas",
+            context_before="plagas sobre Egipto",
+            source_lang="spa_Latn",
+            target_lang="eng_Latn",
+            top_k_paths=2,
+        )
+        total_prob = sum(p.path_probability for p in graph.paths)
+        self.assertAlmostEqual(total_prob, 1.0, places=5)
+
+    def test_missing_ollama_package_raises_import_error(self):
+        """A helpful ImportError is raised when the ollama package is absent."""
+        from model_adapters import OllamaTranslateGemmaAdapter
+
+        adapter = OllamaTranslateGemmaAdapter(model_name="translategemma")
+        with patch.dict("sys.modules", {"ollama": None}):
+            with self.assertRaises(ImportError):
+                adapter._ensure_client()
 
 
 if __name__ == "__main__":
