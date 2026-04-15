@@ -794,13 +794,24 @@ class LlamaCppTranslateGemmaAdapter(BaseModelAdapter):
             self._model_path,
             self._n_gpu_layers,
         )
-        self._llm = Llama(
-            model_path=self._model_path,
-            n_ctx=self._n_ctx,
-            n_gpu_layers=self._n_gpu_layers,
-            chat_format=self._chat_format,
-            verbose=self._verbose,
-        )
+        try:
+            self._llm = Llama(
+                model_path=self._model_path,
+                n_ctx=self._n_ctx,
+                n_gpu_layers=self._n_gpu_layers,
+                chat_format=self._chat_format,
+                verbose=self._verbose,
+            )
+        except AttributeError as exc:
+            # llama-cpp-python <0.3.2 has a bug where LlamaModel.close() raises
+            # "AttributeError: 'LlamaModel' object has no attribute 'sampler'"
+            # during cleanup of a failed __init__, masking the real error.
+            # Upgrade to llama-cpp-python>=0.3.2 to get the actual failure reason.
+            raise RuntimeError(
+                "llama-cpp-python failed to load the model and an internal cleanup "
+                "error hid the real cause. Upgrade to llama-cpp-python>=0.3.2: "
+                "pip install --upgrade llama-cpp-python"
+            ) from exc
         logger.info("llama.cpp model loaded.")
 
     # ------------------------------------------------------------------
