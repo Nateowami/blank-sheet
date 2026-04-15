@@ -30,7 +30,7 @@ pip install -r requirements.txt
 ```bash
 python run_experiment.py \
   --primary-model facebook/nllb-200-distilled-600M \
-  --secondary-model google/gemma-3-1b-it \
+  --secondary-model Qwen/Qwen2.5-1.5B-Instruct \
   --primary-weight 0.6 \
   --secondary-weight 0.4 \
   --verbose
@@ -38,6 +38,12 @@ python run_experiment.py \
 
 Swap `--primary-model` for `facebook/nllb-200-3.3B` or
 `--secondary-model` for a dedicated TranslateGemma checkpoint when available.
+
+> **Note:** `google/gemma-3-1b-it` requires HuggingFace authentication and
+> acceptance of Google's licence agreement.  The command above uses
+> `Qwen/Qwen2.5-1.5B-Instruct` instead, which is publicly accessible with no
+> login required.  If you do have a Gemma licence and a HF token set, you can
+> still pass `--secondary-model google/gemma-3-1b-it`.
 
 ## Run without model weights (stubs)
 

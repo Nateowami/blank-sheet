@@ -3,7 +3,8 @@ Model adapters for the primary (NLLB) and secondary (TranslateGemma) translation
 
 Primary model  – facebook/nllb-200-distilled-600M (default; swap to the full
                  facebook/nllb-200-3.3B when accuracy matters)
-Secondary model – google/gemma-3-1b-it (default; swap to a dedicated
+Secondary model – Qwen/Qwen2.5-1.5B-Instruct (default; publicly accessible,
+                 no HuggingFace login required.  Swap to a dedicated
                  TranslateGemma checkpoint, e.g. google/translate-gemma-9b,
                  when one is available from HuggingFace)
 
@@ -240,12 +241,13 @@ class TranslateGemmaAdapter(BaseModelAdapter):
     so that the model can resolve context-dependent word senses (e.g. "langosta"
     as locust vs. lobster depending on the surrounding passage).
 
-    By default this targets ``google/gemma-3-1b-it`` (the smallest Gemma that
-    follows instructions).  Swap ``model_name`` to the full TranslateGemma
-    checkpoint when available.
+    By default this targets ``Qwen/Qwen2.5-1.5B-Instruct``, a publicly
+    accessible 1.5 B instruction-tuned model that requires no HuggingFace
+    login.  Swap ``model_name`` to a dedicated TranslateGemma checkpoint
+    (e.g. ``google/translate-gemma-9b``) when one is available.
     """
 
-    DEFAULT_MODEL = "google/gemma-3-1b-it"
+    DEFAULT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
 
     def __init__(
         self,
