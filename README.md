@@ -48,6 +48,9 @@ python run_experiment.py \
 
 `--llamacpp-from-ollama-model` reads the Ollama manifest under
 `~/.ollama/models/` and resolves the matching GGUF blob automatically.
+The chat template is auto-detected from the GGUF's embedded metadata.
+If auto-detection gives wrong results, override with
+`--llamacpp-chat-format gemma` (or whichever format matches the model).
 
 #### From a standalone GGUF file
 

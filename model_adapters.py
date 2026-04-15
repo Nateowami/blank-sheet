@@ -744,6 +744,12 @@ class LlamaCppTranslateGemmaAdapter(BaseModelAdapter):
     * A GGUF model file accessible at ``model_path``
     * For GPU acceleration set ``n_gpu_layers`` to the number of layers to
       offload (or -1 for all layers).
+
+    The ``chat_format`` parameter is passed directly to ``llama_cpp.Llama``.
+    When ``None`` (the default), llama.cpp auto-detects the format from the
+    chat-template metadata embedded in the GGUF file, which is the correct
+    behaviour for Ollama-sourced GGUFs.  Pass an explicit string (e.g.
+    ``"gemma"``, ``"chatml"``) only if auto-detection gives wrong results.
     """
 
     _GREEDY_TEMP = 0.1
@@ -754,7 +760,7 @@ class LlamaCppTranslateGemmaAdapter(BaseModelAdapter):
         model_path: str,
         n_ctx: int = 2048,
         n_gpu_layers: int = 0,
-        chat_format: str = "gemma",
+        chat_format: Optional[str] = None,
     ) -> None:
         super().__init__(model_path)
         self._model_path = model_path

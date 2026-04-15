@@ -115,6 +115,17 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--llamacpp-chat-format",
+        type=str,
+        default=None,
+        help=(
+            "Chat format to pass to llama-cpp-python (e.g. 'gemma', 'chatml'). "
+            "Defaults to None, which lets llama.cpp auto-detect the format from the "
+            "GGUF's embedded chat-template metadata. Override only if auto-detection "
+            "gives incorrect results."
+        ),
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default=None,
@@ -151,11 +162,13 @@ def _build_adapters(args: argparse.Namespace):
         secondary = LlamaCppTranslateGemmaAdapter(
             model_path=gguf_path,
             n_gpu_layers=args.llamacpp_n_gpu_layers,
+            chat_format=args.llamacpp_chat_format,
         )
     elif args.secondary_llamacpp_model:
         secondary = LlamaCppTranslateGemmaAdapter(
             model_path=args.secondary_llamacpp_model,
             n_gpu_layers=args.llamacpp_n_gpu_layers,
+            chat_format=args.llamacpp_chat_format,
         )
     elif args.secondary_ollama_model:
         secondary = OllamaTranslateGemmaAdapter(
