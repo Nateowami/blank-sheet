@@ -14,9 +14,11 @@ selects TinyPrimaryAdapter / TinySecondaryAdapter which never load any weights.
 from __future__ import annotations
 
 import concurrent.futures
+import json
 import logging
 import math
 import os
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from translation_fusion import (
@@ -607,6 +609,115 @@ class OllamaTranslateGemmaAdapter(BaseModelAdapter):
             paths[0].path_probability = 1.0
 
         return _paths_to_graph(self.name, paths)
+
+
+# ---------------------------------------------------------------------------
+# Ollama GGUF blob resolver
+# ---------------------------------------------------------------------------
+
+def resolve_ollama_gguf_blob(
+    model_name: str,
+    ollama_models_dir: Optional[str] = None,
+) -> str:
+    """Return the absolute path of the GGUF blob for an Ollama model.
+
+    Ollama stores model weights as GGUF blobs under
+    ``~/.ollama/models/blobs/``.  The mapping from model name to blob is
+    recorded in a manifest JSON file under
+    ``~/.ollama/models/manifests/<registry>/<namespace>/<name>/<tag>``.
+
+    Parameters
+    ----------
+    model_name:
+        Ollama model reference.  Accepts the forms understood by Ollama:
+        ``name``, ``name:tag``, ``namespace/name:tag``, or a fully-qualified
+        ``registry/namespace/name:tag``.  Examples::
+
+            "translategemma"        # → library/translategemma:latest
+            "translategemma:4b"     # → library/translategemma:4b
+            "user/mymodel:latest"
+
+    ollama_models_dir:
+        Override the root models directory (defaults to
+        ``~/.ollama/models``).
+
+    Returns
+    -------
+    str
+        Absolute path to the GGUF blob file, ready to pass to
+        ``LlamaCppTranslateGemmaAdapter(model_path=...)``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the manifest or blob file cannot be found.
+    ValueError
+        If the manifest contains no model layer.
+    """
+    # ------------------------------------------------------------------
+    # Parse the model reference into (registry, namespace, name, tag)
+    # ------------------------------------------------------------------
+    DEFAULT_REGISTRY = "registry.ollama.ai"
+    DEFAULT_NAMESPACE = "library"
+    DEFAULT_TAG = "latest"
+
+    ref = model_name.strip()
+
+    # Split tag
+    if ":" in ref.split("/")[-1]:
+        ref_no_tag, tag = ref.rsplit(":", 1)
+    else:
+        ref_no_tag, tag = ref, DEFAULT_TAG
+
+    parts = ref_no_tag.split("/")
+    if len(parts) == 1:
+        registry, namespace, name = DEFAULT_REGISTRY, DEFAULT_NAMESPACE, parts[0]
+    elif len(parts) == 2:
+        registry, namespace, name = DEFAULT_REGISTRY, parts[0], parts[1]
+    else:
+        registry, namespace, name = parts[0], parts[1], "/".join(parts[2:])
+
+    # ------------------------------------------------------------------
+    # Locate the manifest file
+    # ------------------------------------------------------------------
+    models_root = Path(ollama_models_dir) if ollama_models_dir else Path.home() / ".ollama" / "models"
+    manifest_path = models_root / "manifests" / registry / namespace / name / tag
+
+    if not manifest_path.exists():
+        raise FileNotFoundError(
+            f"Ollama manifest not found: {manifest_path}\n"
+            f"Make sure the model is pulled: ollama pull {model_name}"
+        )
+
+    manifest = json.loads(manifest_path.read_text())
+
+    # ------------------------------------------------------------------
+    # Find the model-weights layer
+    # ------------------------------------------------------------------
+    MODEL_MEDIA_TYPE = "application/vnd.ollama.image.model"
+    model_digest: Optional[str] = None
+    for layer in manifest.get("layers", []):
+        if layer.get("mediaType") == MODEL_MEDIA_TYPE:
+            model_digest = layer["digest"]
+            break
+
+    if model_digest is None:
+        raise ValueError(
+            f"No model layer (mediaType={MODEL_MEDIA_TYPE!r}) found in manifest "
+            f"{manifest_path}"
+        )
+
+    # Ollama stores blobs as "sha256-<hex>" (colon replaced with hyphen)
+    blob_filename = model_digest.replace(":", "-")
+    blob_path = models_root / "blobs" / blob_filename
+
+    if not blob_path.exists():
+        raise FileNotFoundError(
+            f"Ollama blob not found: {blob_path}\n"
+            f"The manifest references digest {model_digest!r} but the file is missing."
+        )
+
+    return str(blob_path)
 
 
 # ---------------------------------------------------------------------------

@@ -29,6 +29,28 @@ pip install -r requirements.txt
 
 ### Option A — llama.cpp / llama-cpp-python (no server, no HuggingFace token)
 
+#### From an Ollama-pulled model (easiest)
+
+If you have already pulled the model with Ollama, you can point llama.cpp
+directly at the GGUF blob that Ollama already downloaded — **no separate GGUF
+download and no Ollama server needed**:
+
+```bash
+ollama pull translategemma:4b   # only needed once; skip if already pulled
+pip install llama-cpp-python
+python run_experiment.py \
+  --primary-model facebook/nllb-200-distilled-600M \
+  --llamacpp-from-ollama-model translategemma:4b \
+  --primary-weight 0.6 \
+  --secondary-weight 0.4 \
+  --verbose
+```
+
+`--llamacpp-from-ollama-model` reads the Ollama manifest under
+`~/.ollama/models/` and resolves the matching GGUF blob automatically.
+
+#### From a standalone GGUF file
+
 Download a GGUF of TranslateGemma (e.g. from HuggingFace or convert with
 `llama.cpp/convert_hf_to_gguf.py`), then run:
 
@@ -42,7 +64,8 @@ python run_experiment.py \
   --verbose
 ```
 
-Use `--llamacpp-n-gpu-layers -1` to offload all layers to GPU.
+Use `--llamacpp-n-gpu-layers -1` to offload all layers to GPU (works with both
+`--llamacpp-from-ollama-model` and `--secondary-llamacpp-model`).
 
 > **Note:** llama.cpp does not implement HuggingFace-style beam search.
 > Multiple independent generation runs at varying temperatures are used instead

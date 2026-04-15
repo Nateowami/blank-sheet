@@ -1,4 +1,6 @@
+import json
 import unittest
+from pathlib import Path
 from typing import List
 from unittest.mock import MagicMock, patch
 
@@ -370,6 +372,113 @@ class TestLlamaCppTranslateGemmaAdapter(unittest.TestCase):
         with patch.dict("sys.modules", {"llama_cpp": None}):
             with self.assertRaises(ImportError):
                 adapter._ensure_loaded()
+
+
+class TestResolveOllamaGgufBlob(unittest.TestCase):
+    """Tests for resolve_ollama_gguf_blob using a temporary fake Ollama model store."""
+
+    def _write_manifest(self, models_root, registry, namespace, name, tag, layers):
+        manifest_dir = models_root / "manifests" / registry / namespace / name
+        manifest_dir.mkdir(parents=True)
+        manifest = {"layers": layers}
+        (manifest_dir / tag).write_text(json.dumps(manifest))
+
+    def _write_blob(self, models_root, digest):
+        blobs_dir = models_root / "blobs"
+        blobs_dir.mkdir(parents=True, exist_ok=True)
+        blob_name = digest.replace(":", "-")
+        blob_path = blobs_dir / blob_name
+        blob_path.write_bytes(b"GGUF")
+        return blob_path
+
+    def setUp(self):
+        import tempfile
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.models_root = Path(self._tmpdir.name)
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _resolve(self, model_name):
+        from model_adapters import resolve_ollama_gguf_blob
+        return resolve_ollama_gguf_blob(model_name, ollama_models_dir=str(self.models_root))
+
+    def test_simple_model_name(self):
+        """'translategemma' resolves to registry.ollama.ai/library/translategemma:latest."""
+        digest = "sha256:abc123"
+        self._write_manifest(
+            self.models_root,
+            "registry.ollama.ai", "library", "translategemma", "latest",
+            [{"mediaType": "application/vnd.ollama.image.model", "digest": digest}],
+        )
+        expected = self._write_blob(self.models_root, digest)
+        result = self._resolve("translategemma")
+        self.assertEqual(result, str(expected))
+
+    def test_name_with_tag(self):
+        """'translategemma:4b' resolves to the 4b tag manifest."""
+        digest = "sha256:def456"
+        self._write_manifest(
+            self.models_root,
+            "registry.ollama.ai", "library", "translategemma", "4b",
+            [{"mediaType": "application/vnd.ollama.image.model", "digest": digest}],
+        )
+        self._write_blob(self.models_root, digest)
+        result = self._resolve("translategemma:4b")
+        self.assertTrue(result.endswith("sha256-def456"))
+
+    def test_namespaced_model(self):
+        """'user/mymodel:v1' uses the given namespace."""
+        digest = "sha256:999aaa"
+        self._write_manifest(
+            self.models_root,
+            "registry.ollama.ai", "user", "mymodel", "v1",
+            [{"mediaType": "application/vnd.ollama.image.model", "digest": digest}],
+        )
+        self._write_blob(self.models_root, digest)
+        result = self._resolve("user/mymodel:v1")
+        self.assertTrue(result.endswith("sha256-999aaa"))
+
+    def test_skips_non_model_layers(self):
+        """Only the application/vnd.ollama.image.model layer is used."""
+        digest = "sha256:modelblob"
+        self._write_manifest(
+            self.models_root,
+            "registry.ollama.ai", "library", "translategemma", "latest",
+            [
+                {"mediaType": "application/vnd.ollama.image.params", "digest": "sha256:params"},
+                {"mediaType": "application/vnd.ollama.image.model", "digest": digest},
+            ],
+        )
+        self._write_blob(self.models_root, digest)
+        result = self._resolve("translategemma")
+        self.assertTrue(result.endswith("sha256-modelblob"))
+
+    def test_missing_manifest_raises_file_not_found(self):
+        """FileNotFoundError when the manifest does not exist."""
+        with self.assertRaises(FileNotFoundError):
+            self._resolve("nonexistent-model")
+
+    def test_manifest_without_model_layer_raises_value_error(self):
+        """ValueError when the manifest has no model layer."""
+        self._write_manifest(
+            self.models_root,
+            "registry.ollama.ai", "library", "translategemma", "latest",
+            [{"mediaType": "application/vnd.ollama.image.params", "digest": "sha256:params"}],
+        )
+        with self.assertRaises(ValueError):
+            self._resolve("translategemma")
+
+    def test_missing_blob_file_raises_file_not_found(self):
+        """FileNotFoundError when the manifest exists but the blob is missing."""
+        self._write_manifest(
+            self.models_root,
+            "registry.ollama.ai", "library", "translategemma", "latest",
+            [{"mediaType": "application/vnd.ollama.image.model", "digest": "sha256:gone"}],
+        )
+        # deliberately do NOT write the blob
+        with self.assertRaises(FileNotFoundError):
+            self._resolve("translategemma")
 
 
 if __name__ == "__main__":

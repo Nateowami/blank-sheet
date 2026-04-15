@@ -95,6 +95,17 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--llamacpp-from-ollama-model",
+        type=str,
+        default=None,
+        help=(
+            "Resolve the GGUF blob for a locally-pulled Ollama model and load it "
+            "directly via llama-cpp-python (no Ollama server needed). "
+            "Example: translategemma:4b. "
+            "Takes precedence over --secondary-llamacpp-model when provided."
+        ),
+    )
+    parser.add_argument(
         "--llamacpp-n-gpu-layers",
         type=int,
         default=0,
@@ -127,6 +138,7 @@ def _build_adapters(args: argparse.Namespace):
         TranslateGemmaAdapter,
         TinyPrimaryAdapter,
         TinySecondaryAdapter,
+        resolve_ollama_gguf_blob,
     )
 
     primary = (
@@ -134,7 +146,13 @@ def _build_adapters(args: argparse.Namespace):
         if args.primary_model
         else TinyPrimaryAdapter()
     )
-    if args.secondary_llamacpp_model:
+    if args.llamacpp_from_ollama_model:
+        gguf_path = resolve_ollama_gguf_blob(args.llamacpp_from_ollama_model)
+        secondary = LlamaCppTranslateGemmaAdapter(
+            model_path=gguf_path,
+            n_gpu_layers=args.llamacpp_n_gpu_layers,
+        )
+    elif args.secondary_llamacpp_model:
         secondary = LlamaCppTranslateGemmaAdapter(
             model_path=args.secondary_llamacpp_model,
             n_gpu_layers=args.llamacpp_n_gpu_layers,
