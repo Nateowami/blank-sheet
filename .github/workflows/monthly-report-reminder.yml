@@ -1,0 +1,17 @@
+name: Monthly report reminder
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail with reminder
+        run: |
+          echo "Send reports to Noah"
+          exit 1
