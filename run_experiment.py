@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
             "By default uses the tiny stub adapters (no model weights needed).\n"
             "Pass real model names to use NLLB and TranslateGemma:\n"
             "  --primary-model facebook/nllb-200-distilled-600M\n"
-            "  --secondary-model google/gemma-3-1b-it\n"
+            "  --secondary-model google/translategemma-4b-it\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "HuggingFace model ID for the secondary (TranslateGemma-style) model. "
-            "Example: google/gemma-3-1b-it. "
+            "Example: google/translategemma-4b-it. "
             "When omitted, the tiny stub adapter is used."
         ),
     )

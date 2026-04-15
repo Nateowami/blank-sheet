@@ -27,23 +27,24 @@ pip install -r requirements.txt
 
 ## Run with real models
 
+`google/translategemma-4b-it` is a gated model.  Before running, you must:
+
+1. Accept Google's licence at <https://huggingface.co/google/translategemma-4b-it>
+2. Set your HuggingFace token: `export HF_TOKEN=<your_token>`
+
+Then run:
+
 ```bash
 python run_experiment.py \
   --primary-model facebook/nllb-200-distilled-600M \
-  --secondary-model Qwen/Qwen2.5-1.5B-Instruct \
+  --secondary-model google/translategemma-4b-it \
   --primary-weight 0.6 \
   --secondary-weight 0.4 \
   --verbose
 ```
 
-Swap `--primary-model` for `facebook/nllb-200-3.3B` or
-`--secondary-model` for a dedicated TranslateGemma checkpoint when available.
-
-> **Note:** `google/gemma-3-1b-it` requires HuggingFace authentication and
-> acceptance of Google's licence agreement.  The command above uses
-> `Qwen/Qwen2.5-1.5B-Instruct` instead, which is publicly accessible with no
-> login required.  If you do have a Gemma licence and a HF token set, you can
-> still pass `--secondary-model google/gemma-3-1b-it`.
+Swap `--primary-model` for `facebook/nllb-200-3.3B` for higher-accuracy primary
+translations.
 
 ## Run without model weights (stubs)
 

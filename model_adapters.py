@@ -3,10 +3,10 @@ Model adapters for the primary (NLLB) and secondary (TranslateGemma) translation
 
 Primary model  – facebook/nllb-200-distilled-600M (default; swap to the full
                  facebook/nllb-200-3.3B when accuracy matters)
-Secondary model – Qwen/Qwen2.5-1.5B-Instruct (default; publicly accessible,
-                 no HuggingFace login required.  Swap to a dedicated
-                 TranslateGemma checkpoint, e.g. google/translate-gemma-9b,
-                 when one is available from HuggingFace)
+Secondary model – google/translategemma-4b-it (default; Google's purpose-built
+                 translation model.  Requires a HuggingFace account, acceptance
+                 of Google's licence at https://huggingface.co/google/translategemma-4b-it,
+                 and the HF_TOKEN environment variable to be set.)
 
 For offline / unit-test use, pass ``--use-stubs`` to run_experiment.py; this
 selects TinyPrimaryAdapter / TinySecondaryAdapter which never load any weights.
@@ -14,6 +14,7 @@ selects TinyPrimaryAdapter / TinySecondaryAdapter which never load any weights.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Dict, List, Optional, Tuple
 
 from translation_fusion import (
@@ -93,12 +94,16 @@ class NLLBAdapter(BaseModelAdapter):
         logger.info("Loading NLLB model %s on %s …", self._model_name, self._device)
         # AutoTokenizer returns NllbTokenizerFast in transformers 5.x, which is
         # better maintained than the legacy slow NllbTokenizer.
-        self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self._model_name,
+            token=os.environ.get("HF_TOKEN"),
+        )
         # Load model directly onto the target device to avoid a CPU→GPU copy
         # that would double peak memory usage.
         self._model = AutoModelForSeq2SeqLM.from_pretrained(
             self._model_name,
             device_map=self._device,
+            token=os.environ.get("HF_TOKEN"),
         )
         self._model.eval()
         logger.info("NLLB model loaded.")
@@ -217,37 +222,31 @@ class NLLBAdapter(BaseModelAdapter):
 # TranslateGemma adapter (secondary, decoder-only)
 # ---------------------------------------------------------------------------
 
-_SECONDARY_PROMPT_TEMPLATE = """\
-Translate the following text from {source_lang_name} to {target_lang_name}.
+_SECONDARY_PROMPT_TEMPLATE = (
+    "Translate the following text from {source_lang_name} to {target_lang_name}."
+    " Prior context (for reference only): \"{context_before}\""
+    " Text: {text}"
+)
 
-Previous context (already translated, for reference only): "{context_before}"
-
-Text to translate: "{text}"
-
-Translation:"""
-
-_SECONDARY_PROMPT_NO_CONTEXT = """\
-Translate the following text from {source_lang_name} to {target_lang_name}.
-
-Text to translate: "{text}"
-
-Translation:"""
+_SECONDARY_PROMPT_NO_CONTEXT = (
+    "Translate the following text from {source_lang_name} to {target_lang_name}: {text}"
+)
 
 
 class TranslateGemmaAdapter(BaseModelAdapter):
-    """Secondary adapter wrapping instruction-tuned decoder-only models.
+    """Secondary adapter wrapping Google's TranslateGemma decoder-only model.
 
     The adapter feeds ``context_before`` to the model via a structured prompt
     so that the model can resolve context-dependent word senses (e.g. "langosta"
     as locust vs. lobster depending on the surrounding passage).
 
-    By default this targets ``Qwen/Qwen2.5-1.5B-Instruct``, a publicly
-    accessible 1.5 B instruction-tuned model that requires no HuggingFace
-    login.  Swap ``model_name`` to a dedicated TranslateGemma checkpoint
-    (e.g. ``google/translate-gemma-9b``) when one is available.
+    By default this targets ``google/translategemma-4b-it``, Google's
+    purpose-built translation model.  The model is gated on HuggingFace:
+    accept the licence at https://huggingface.co/google/translategemma-4b-it
+    and set the ``HF_TOKEN`` environment variable before loading.
     """
 
-    DEFAULT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+    DEFAULT_MODEL = "google/translategemma-4b-it"
 
     def __init__(
         self,
@@ -276,13 +275,17 @@ class TranslateGemmaAdapter(BaseModelAdapter):
         logger.info(
             "Loading TranslateGemma model %s on %s …", self._model_name, self._device
         )
-        self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self._model_name,
+            token=os.environ.get("HF_TOKEN"),
+        )
         # Load model directly onto the target device to avoid a CPU→GPU copy
         # that would double peak memory usage when NLLB is already on GPU.
         self._model = AutoModelForCausalLM.from_pretrained(
             self._model_name,
             torch_dtype="auto",
             device_map=self._device,
+            token=os.environ.get("HF_TOKEN"),
         )
         self._model.eval()
         logger.info("TranslateGemma model loaded.")
@@ -330,9 +333,16 @@ class TranslateGemmaAdapter(BaseModelAdapter):
 
         self._ensure_loaded()
 
-        prompt = self._build_prompt(text, context_before, source_lang, target_lang)
-        inputs = self._tokenizer(prompt, return_tensors="pt").to(self._device)
-        prompt_len = inputs.input_ids.shape[1]
+        user_content = self._build_prompt(text, context_before, source_lang, target_lang)
+        # Use the model's own chat template so that the correct special tokens
+        # (<start_of_turn>, <end_of_turn>, etc.) are inserted — required for
+        # instruction-tuned models such as TranslateGemma.
+        input_ids = self._tokenizer.apply_chat_template(
+            [{"role": "user", "content": user_content}],
+            return_tensors="pt",
+            add_generation_prompt=True,
+        ).to(self._device)
+        prompt_len = input_ids.shape[1]
 
         # Build a flat list of EOS token IDs.
         # self._tokenizer.eos_token_id may be an int *or* a list for
@@ -346,7 +356,7 @@ class TranslateGemmaAdapter(BaseModelAdapter):
 
         with torch.no_grad():
             outputs = self._model.generate(
-                **inputs,
+                input_ids=input_ids,
                 num_beams=max(top_k_paths, 4),
                 num_return_sequences=top_k_paths,
                 output_scores=True,
