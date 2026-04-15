@@ -5,6 +5,8 @@ on:
     - cron: "0 0 1 * *"
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   remind:
     runs-on: ubuntu-latest
