@@ -84,6 +84,26 @@ def parse_args() -> argparse.Namespace:
         help="Base URL of the Ollama server (default: http://localhost:11434).",
     )
     parser.add_argument(
+        "--secondary-llamacpp-model",
+        type=str,
+        default=None,
+        help=(
+            "Path to a GGUF model file for the secondary model (llama-cpp-python). "
+            "Example: /models/translategemma-4b-it-q4_k_m.gguf. "
+            "Takes precedence over --secondary-ollama-model and --secondary-model "
+            "when provided."
+        ),
+    )
+    parser.add_argument(
+        "--llamacpp-n-gpu-layers",
+        type=int,
+        default=0,
+        help=(
+            "Number of layers to offload to GPU for the llama.cpp secondary adapter "
+            "(default: 0 = CPU only; -1 = all layers)."
+        ),
+    )
+    parser.add_argument(
         "--device",
         type=str,
         default=None,
@@ -101,6 +121,7 @@ def parse_args() -> argparse.Namespace:
 def _build_adapters(args: argparse.Namespace):
     """Construct primary and secondary adapters based on CLI arguments."""
     from model_adapters import (
+        LlamaCppTranslateGemmaAdapter,
         NLLBAdapter,
         OllamaTranslateGemmaAdapter,
         TranslateGemmaAdapter,
@@ -113,7 +134,12 @@ def _build_adapters(args: argparse.Namespace):
         if args.primary_model
         else TinyPrimaryAdapter()
     )
-    if args.secondary_ollama_model:
+    if args.secondary_llamacpp_model:
+        secondary = LlamaCppTranslateGemmaAdapter(
+            model_path=args.secondary_llamacpp_model,
+            n_gpu_layers=args.llamacpp_n_gpu_layers,
+        )
+    elif args.secondary_ollama_model:
         secondary = OllamaTranslateGemmaAdapter(
             model_name=args.secondary_ollama_model,
             host=args.ollama_host,

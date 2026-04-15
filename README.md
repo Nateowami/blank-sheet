@@ -27,7 +27,28 @@ pip install -r requirements.txt
 
 ## Run with real models
 
-### Option A — Ollama (recommended, no HuggingFace token required)
+### Option A — llama.cpp / llama-cpp-python (no server, no HuggingFace token)
+
+Download a GGUF of TranslateGemma (e.g. from HuggingFace or convert with
+`llama.cpp/convert_hf_to_gguf.py`), then run:
+
+```bash
+pip install llama-cpp-python
+python run_experiment.py \
+  --primary-model facebook/nllb-200-distilled-600M \
+  --secondary-llamacpp-model /path/to/translategemma-4b-it-q4_k_m.gguf \
+  --primary-weight 0.6 \
+  --secondary-weight 0.4 \
+  --verbose
+```
+
+Use `--llamacpp-n-gpu-layers -1` to offload all layers to GPU.
+
+> **Note:** llama.cpp does not implement HuggingFace-style beam search.
+> Multiple independent generation runs at varying temperatures are used instead
+> to produce the same set of candidate paths.
+
+### Option B — Ollama (requires a running Ollama server)
 
 Install [Ollama](https://ollama.com), pull a compatible TranslateGemma GGUF,
 then run:
@@ -45,7 +66,7 @@ python run_experiment.py \
 The `--ollama-host` flag (default: `http://localhost:11434`) lets you point at a
 remote Ollama server.
 
-### Option B — HuggingFace (loads weights into Python memory)
+### Option C — HuggingFace (loads weights into Python memory)
 
 `google/translategemma-4b-it` is a gated model.  Before running, you must:
 

@@ -261,5 +261,116 @@ class TestOllamaTranslateGemmaAdapter(unittest.TestCase):
                 adapter._ensure_client()
 
 
+class TestLlamaCppTranslateGemmaAdapter(unittest.TestCase):
+    """Tests for LlamaCppTranslateGemmaAdapter using a mocked llama_cpp.Llama."""
+
+    def _make_response(self, content: str, content_lps=None):
+        """Build a dict that mimics the llama-cpp-python create_chat_completion return value."""
+        if content_lps is not None:
+            logprobs = {"content": content_lps}
+        else:
+            logprobs = None
+        return {
+            "choices": [
+                {
+                    "message": {"content": content},
+                    "logprobs": logprobs,
+                    "finish_reason": "stop",
+                }
+            ]
+        }
+
+    def _make_lp(self, token: str, logprob: float) -> dict:
+        return {"token": token, "logprob": logprob, "bytes": None, "top_logprobs": []}
+
+    def _make_adapter(self):
+        from model_adapters import LlamaCppTranslateGemmaAdapter
+        adapter = LlamaCppTranslateGemmaAdapter(model_path="/fake/model.gguf")
+        adapter._llm = MagicMock()
+        return adapter
+
+    def test_builds_graph_from_logprobs(self):
+        adapter = self._make_adapter()
+        lps = [
+            self._make_lp("The", -0.1),
+            self._make_lp(" chef", -0.2),
+            self._make_lp(" cooked", -0.3),
+            self._make_lp(" lobster", -0.15),
+        ]
+        adapter._llm.create_chat_completion.return_value = self._make_response(
+            "The chef cooked lobster", lps
+        )
+        graph = adapter.build_token_graph(
+            text="El chef cocinó langosta",
+            context_before="restaurante de mariscos",
+            source_lang="spa_Latn",
+            target_lang="eng_Latn",
+            top_k_paths=1,
+        )
+        self.assertIsInstance(graph, TokenGraph)
+        self.assertTrue(graph.paths)
+        self.assertIn("lobster", graph.best_text.lower())
+
+    def test_fallback_without_logprobs(self):
+        """When no logprobs are returned, adapter falls back to uniform confidence."""
+        adapter = self._make_adapter()
+        adapter._llm.create_chat_completion.return_value = self._make_response(
+            "The lawyer advised me", content_lps=None
+        )
+        graph = adapter.build_token_graph(
+            text="Mon avocat m'a conseillé",
+            context_before="le procès avait commencé",
+            source_lang="fra_Latn",
+            target_lang="eng_Latn",
+            top_k_paths=1,
+        )
+        self.assertIsInstance(graph, TokenGraph)
+        self.assertTrue(graph.paths)
+        tokens = " ".join(tw.token for tw in graph.paths[0].token_weights)
+        self.assertIn("lawyer", tokens.lower())
+
+    def test_multiple_paths_normalised(self):
+        """Multiple runs produce paths whose probabilities sum to ~1."""
+        import math
+
+        adapter = self._make_adapter()
+
+        adapter._llm.create_chat_completion.side_effect = [
+            self._make_response("locusts", [self._make_lp("locusts", -0.1)]),
+            self._make_response("lobsters", [self._make_lp("lobsters", -1.5)]),
+        ]
+        graph = adapter.build_token_graph(
+            text="una plaga de langostas",
+            context_before="plagas sobre Egipto",
+            source_lang="spa_Latn",
+            target_lang="eng_Latn",
+            top_k_paths=2,
+        )
+        total_prob = sum(p.path_probability for p in graph.paths)
+        self.assertAlmostEqual(total_prob, 1.0, places=5)
+
+    def test_greedy_run_uses_low_temperature(self):
+        """The first call should use the low (greedy) temperature."""
+        adapter = self._make_adapter()
+        lps = [self._make_lp("Hello", -0.05)]
+        adapter._llm.create_chat_completion.return_value = self._make_response("Hello", lps)
+        adapter.build_token_graph(
+            text="Hola", context_before="", source_lang="spa_Latn", target_lang="eng_Latn",
+            top_k_paths=1,
+        )
+        call_kwargs = adapter._llm.create_chat_completion.call_args
+        actual_temp = call_kwargs.kwargs.get("temperature")
+        self.assertAlmostEqual(actual_temp, adapter._GREEDY_TEMP, places=3)
+
+    def test_missing_package_raises_import_error(self):
+        """A clear ImportError is raised when llama-cpp-python is absent."""
+        from model_adapters import LlamaCppTranslateGemmaAdapter
+
+        adapter = LlamaCppTranslateGemmaAdapter(model_path="/fake/model.gguf")
+        with patch.dict("sys.modules", {"llama_cpp": None}):
+            with self.assertRaises(ImportError):
+                adapter._ensure_loaded()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -7,3 +7,6 @@ accelerate>=0.26.0      # optional but recommended for large model loading
 
 # Ollama adapter (optional: only needed when using --secondary-ollama-model)
 ollama>=0.4.0
+
+# llama.cpp adapter (optional: only needed when using --secondary-llamacpp-model)
+llama-cpp-python>=0.3.0

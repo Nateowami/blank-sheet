@@ -610,6 +610,191 @@ class OllamaTranslateGemmaAdapter(BaseModelAdapter):
 
 
 # ---------------------------------------------------------------------------
+# llama.cpp adapter (secondary, loads a GGUF file directly via llama-cpp-python)
+# ---------------------------------------------------------------------------
+
+class LlamaCppTranslateGemmaAdapter(BaseModelAdapter):
+    """Secondary adapter that loads a GGUF model file directly via llama-cpp-python.
+
+    Unlike ``OllamaTranslateGemmaAdapter``, no separate server process is
+    required — the GGUF weights are loaded into Python memory on first use.
+    This makes the adapter self-contained and suitable for environments where
+    running a daemon is inconvenient.
+
+    llama.cpp does not implement HuggingFace-style beam search.  Multiple
+    candidate paths are produced instead by making ``top_k_paths`` independent
+    ``create_chat_completion`` calls — the first near-greedy (temperature
+    ``_GREEDY_TEMP``), the rest at a higher temperature for diversity.  Each
+    call requests per-token log-probabilities which are used to rank the paths
+    and assign normalised path probabilities via softmax.
+
+    Requirements:
+    * ``pip install llama-cpp-python``
+    * A GGUF model file accessible at ``model_path``
+    * For GPU acceleration set ``n_gpu_layers`` to the number of layers to
+      offload (or -1 for all layers).
+    """
+
+    _GREEDY_TEMP = 0.1
+    _DIVERSE_TEMP = 0.7
+
+    def __init__(
+        self,
+        model_path: str,
+        n_ctx: int = 2048,
+        n_gpu_layers: int = 0,
+        chat_format: str = "gemma",
+    ) -> None:
+        super().__init__(model_path)
+        self._model_path = model_path
+        self._n_ctx = n_ctx
+        self._n_gpu_layers = n_gpu_layers
+        self._chat_format = chat_format
+        self._llm = None
+
+    # ------------------------------------------------------------------
+    # Lazy loading
+    # ------------------------------------------------------------------
+
+    def _ensure_loaded(self) -> None:
+        if self._llm is not None:
+            return
+        try:
+            from llama_cpp import Llama
+        except ImportError as exc:
+            raise ImportError(
+                "The 'llama-cpp-python' package is required for LlamaCppTranslateGemmaAdapter. "
+                "Install it with: pip install llama-cpp-python"
+            ) from exc
+        logger.info(
+            "Loading GGUF model %s via llama.cpp (n_gpu_layers=%d) …",
+            self._model_path,
+            self._n_gpu_layers,
+        )
+        self._llm = Llama(
+            model_path=self._model_path,
+            n_ctx=self._n_ctx,
+            n_gpu_layers=self._n_gpu_layers,
+            chat_format=self._chat_format,
+            verbose=False,
+        )
+        logger.info("llama.cpp model loaded.")
+
+    # ------------------------------------------------------------------
+    # Prompt building (same format as TranslateGemmaAdapter)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_prompt(
+        text: str,
+        context_before: str,
+        source_lang: str,
+        target_lang: str,
+    ) -> str:
+        src_name = lang_name(source_lang)
+        tgt_name = lang_name(target_lang)
+        if context_before.strip():
+            return _SECONDARY_PROMPT_TEMPLATE.format(
+                source_lang_name=src_name,
+                target_lang_name=tgt_name,
+                context_before=context_before.strip(),
+                text=text.strip(),
+            )
+        return _SECONDARY_PROMPT_NO_CONTEXT.format(
+            source_lang_name=src_name,
+            target_lang_name=tgt_name,
+            text=text.strip(),
+        )
+
+    # ------------------------------------------------------------------
+    # TokenGraph construction
+    # ------------------------------------------------------------------
+
+    def build_token_graph(
+        self,
+        text: str,
+        context_before: str,
+        source_lang: str = "spa_Latn",
+        target_lang: str = "eng_Latn",
+        top_k_paths: int = 4,
+        min_path_probability: float = 0.02,
+    ) -> TokenGraph:
+        self._ensure_loaded()
+
+        prompt = self._build_prompt(text, context_before, source_lang, target_lang)
+        messages = [{"role": "user", "content": prompt}]
+
+        raw_paths: List[tuple] = []  # (avg_log_prob, CandidatePath)
+
+        for i in range(top_k_paths):
+            temperature = self._GREEDY_TEMP if i == 0 else self._DIVERSE_TEMP
+            resp = self._llm.create_chat_completion(
+                messages=messages,
+                logprobs=True,
+                temperature=temperature,
+                max_tokens=128,
+            )
+            choice = resp["choices"][0]
+            lp_data = choice.get("logprobs") or {}
+            content_lps: List[dict] = lp_data.get("content") or []
+
+            if content_lps:
+                token_weights: List[TokenWeight] = [
+                    TokenWeight(
+                        token=lp["token"],
+                        probability=float(math.exp(lp["logprob"])),
+                    )
+                    for lp in content_lps
+                ]
+                avg_log_prob = sum(lp["logprob"] for lp in content_lps) / len(content_lps)
+            else:
+                # logprobs not returned — fall back to uniform confidence.
+                content_text = (choice.get("message", {}).get("content") or "").strip()
+                content_text = content_text.split("\n")[0]
+                words = content_text.split()
+                token_weights = [TokenWeight(token=w, probability=0.7) for w in words]
+                avg_log_prob = math.log(0.7)
+
+            if token_weights:
+                raw_paths.append(
+                    (avg_log_prob, CandidatePath(token_weights=token_weights, path_probability=0.0))
+                )
+
+        if not raw_paths:
+            # Absolute fallback.
+            first_content = (
+                resp["choices"][0].get("message", {}).get("content") or text
+            ).strip().split("\n")[0]
+            words = first_content.split()
+            return _paths_to_graph(
+                self.name,
+                [
+                    CandidatePath(
+                        token_weights=[TokenWeight(token=w, probability=0.5) for w in words],
+                        path_probability=1.0,
+                    )
+                ],
+            )
+
+        # Softmax over average log-probs to assign path probabilities.
+        scores = [s for s, _ in raw_paths]
+        max_score = max(scores)
+        exp_scores = [math.exp(s - max_score) for s in scores]
+        total = sum(exp_scores)
+        paths: List[CandidatePath] = []
+        for exp_s, (_, path) in zip(exp_scores, raw_paths):
+            path.path_probability = exp_s / total
+            if path.path_probability >= min_path_probability:
+                paths.append(path)
+
+        if not paths:
+            paths = [raw_paths[0][1]]
+            paths[0].path_probability = 1.0
+
+        return _paths_to_graph(self.name, paths)
+
+
+# ---------------------------------------------------------------------------
 # Stub adapters (no model loading; used for offline testing)
 # ---------------------------------------------------------------------------
 
