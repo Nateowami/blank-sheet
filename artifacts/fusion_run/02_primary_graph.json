@@ -1,0 +1,48 @@
+{
+  "model_name": "primary_tiny",
+  "best_text": "The bass was huge",
+  "paths": [
+    {
+      "path_probability": 0.66,
+      "token_weights": [
+        {
+          "token": "The",
+          "probability": 0.66
+        },
+        {
+          "token": "bass",
+          "probability": 0.66
+        },
+        {
+          "token": "was",
+          "probability": 0.66
+        },
+        {
+          "token": "huge",
+          "probability": 0.66
+        }
+      ]
+    },
+    {
+      "path_probability": 0.31,
+      "token_weights": [
+        {
+          "token": "The",
+          "probability": 0.31
+        },
+        {
+          "token": "instrument",
+          "probability": 0.31
+        },
+        {
+          "token": "was",
+          "probability": 0.31
+        },
+        {
+          "token": "huge",
+          "probability": 0.31
+        }
+      ]
+    }
+  ]
+}

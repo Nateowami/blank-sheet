@@ -1,0 +1,56 @@
+{
+  "model_name": "secondary_tiny",
+  "best_text": "We sat near the shore",
+  "paths": [
+    {
+      "path_probability": 0.71,
+      "token_weights": [
+        {
+          "token": "▁We",
+          "probability": 0.71
+        },
+        {
+          "token": "▁sat",
+          "probability": 0.71
+        },
+        {
+          "token": "▁near",
+          "probability": 0.71
+        },
+        {
+          "token": "▁the",
+          "probability": 0.71
+        },
+        {
+          "token": "▁shore",
+          "probability": 0.71
+        }
+      ]
+    },
+    {
+      "path_probability": 0.27,
+      "token_weights": [
+        {
+          "token": "▁We",
+          "probability": 0.27
+        },
+        {
+          "token": "▁sat",
+          "probability": 0.27
+        },
+        {
+          "token": "▁near",
+          "probability": 0.27
+        },
+        {
+          "token": "▁the",
+          "probability": 0.27
+        },
+        {
+          "token": "▁bank",
+          "probability": 0.27
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "model_name": "primary_tiny",
+  "best_text": "She visited the bank",
+  "paths": [
+    {
+      "path_probability": 0.73,
+      "token_weights": [
+        {
+          "token": "She",
+          "probability": 0.73
+        },
+        {
+          "token": "visited",
+          "probability": 0.73
+        },
+        {
+          "token": "the",
+          "probability": 0.73
+        },
+        {
+          "token": "bank",
+          "probability": 0.73
+        }
+      ]
+    },
+    {
+      "path_probability": 0.21,
+      "token_weights": [
+        {
+          "token": "She",
+          "probability": 0.21
+        },
+        {
+          "token": "visited",
+          "probability": 0.21
+        },
+        {
+          "token": "the",
+          "probability": 0.21
+        },
+        {
+          "token": "shore",
+          "probability": 0.21
+        }
+      ]
+    }
+  ]
+}

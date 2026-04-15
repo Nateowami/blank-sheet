@@ -1,0 +1,15 @@
+{
+  "final_text": "The fish was huge",
+  "primary_text": "The bass was huge",
+  "secondary_text": "The fish was huge",
+  "changes": [
+    {
+      "kind": "replace",
+      "primary_segment": "bass",
+      "secondary_segment": "fish",
+      "primary_score": 0.297,
+      "secondary_score": 0.407,
+      "selected": "secondary"
+    }
+  ]
+}

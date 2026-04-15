@@ -1,0 +1,68 @@
+{
+  "model_name": "secondary_tiny",
+  "best_text": "She visited the bank",
+  "paths": [
+    {
+      "path_probability": 0.78,
+      "token_weights": [
+        {
+          "token": "▁She",
+          "probability": 0.78
+        },
+        {
+          "token": "▁vis",
+          "probability": 0.78
+        },
+        {
+          "token": "ited",
+          "probability": 0.7644
+        },
+        {
+          "token": "▁the",
+          "probability": 0.78
+        },
+        {
+          "token": "▁bank",
+          "probability": 0.78
+        }
+      ]
+    },
+    {
+      "path_probability": 0.2,
+      "token_weights": [
+        {
+          "token": "▁She",
+          "probability": 0.2
+        },
+        {
+          "token": "▁vis",
+          "probability": 0.2
+        },
+        {
+          "token": "ited",
+          "probability": 0.196
+        },
+        {
+          "token": "▁the",
+          "probability": 0.2
+        },
+        {
+          "token": "▁fina",
+          "probability": 0.2
+        },
+        {
+          "token": "ncial",
+          "probability": 0.196
+        },
+        {
+          "token": "▁insti",
+          "probability": 0.2
+        },
+        {
+          "token": "tution",
+          "probability": 0.196
+        }
+      ]
+    }
+  ]
+}
