@@ -4,13 +4,11 @@ from dataclasses import dataclass, asdict
 from difflib import SequenceMatcher
 from pathlib import Path
 from statistics import mean
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 import json
 
+# Word-level confidence distribution constants
 WORD_SCORE_BASE = 0.9
-SUBWORD_CONTINUATION_DISCOUNT = 0.98
-SUBWORD_SPLIT_THRESHOLD = 6
-MIN_SUBWORD_SPLIT_POSITION = 3
 
 
 @dataclass
@@ -176,6 +174,8 @@ def merge_graphs(
 
 
 class BaseModelAdapter:
+    """Abstract base for primary and secondary translation model adapters."""
+
     def __init__(self, name: str):
         self.name = name
 
@@ -183,89 +183,12 @@ class BaseModelAdapter:
         self,
         text: str,
         context_before: str,
+        source_lang: str,
+        target_lang: str,
         top_k_paths: int,
         min_path_probability: float,
     ) -> TokenGraph:
         raise NotImplementedError
-
-
-class TinyPrimaryAdapter(BaseModelAdapter):
-    def __init__(self) -> None:
-        super().__init__("primary_tiny")
-
-    def build_token_graph(
-        self,
-        text: str,
-        context_before: str,
-        top_k_paths: int = 2,
-        min_path_probability: float = 0.05,
-    ) -> TokenGraph:
-        options = _context_options(text, context_before)
-        paths: List[CandidatePath] = []
-        for candidate_text, path_prob in options["primary"][:top_k_paths]:
-            if path_prob < min_path_probability:
-                continue
-            words = candidate_text.split()
-            token_weights = [TokenWeight(token=w, probability=path_prob) for w in words]
-            paths.append(CandidatePath(token_weights=token_weights, path_probability=path_prob))
-        return _paths_to_graph(self.name, paths)
-
-
-class TinySecondaryAdapter(BaseModelAdapter):
-    def __init__(self) -> None:
-        super().__init__("secondary_tiny")
-
-    def build_token_graph(
-        self,
-        text: str,
-        context_before: str,
-        top_k_paths: int = 3,
-        min_path_probability: float = 0.12,
-    ) -> TokenGraph:
-        options = _context_options(text, context_before)
-        paths: List[CandidatePath] = []
-        for candidate_text, path_prob in options["secondary"][:top_k_paths]:
-            if path_prob < min_path_probability:
-                continue
-            words = candidate_text.split()
-            subword_tokens: List[TokenWeight] = []
-            for word in words:
-                if len(word) > SUBWORD_SPLIT_THRESHOLD:
-                    split = max(MIN_SUBWORD_SPLIT_POSITION, len(word) // 2)
-                    first = "▁" + word[:split]
-                    second = word[split:]
-                    subword_tokens.append(TokenWeight(token=first, probability=path_prob))
-                    if second:
-                        subword_tokens.append(
-                            TokenWeight(token=second, probability=path_prob * SUBWORD_CONTINUATION_DISCOUNT)
-                        )
-                else:
-                    subword_tokens.append(TokenWeight(token="▁" + word, probability=path_prob))
-            paths.append(CandidatePath(token_weights=subword_tokens, path_probability=path_prob))
-        return _paths_to_graph(self.name, paths)
-
-
-def _context_options(text: str, context_before: str) -> Dict[str, List[Tuple[str, float]]]:
-    joined = (context_before + " " + text).lower()
-    if "river" in joined or "water" in joined:
-        return {
-            "primary": [("We sat near the bank", 0.64), ("We sat near the shore", 0.35)],
-            "secondary": [("We sat near the shore", 0.71), ("We sat near the bank", 0.27)],
-        }
-    if "money" in joined or "loan" in joined:
-        return {
-            "primary": [("She visited the bank", 0.73), ("She visited the shore", 0.21)],
-            "secondary": [("She visited the bank", 0.78), ("She visited the financial institution", 0.2)],
-        }
-    if "fish" in joined or "lake" in joined:
-        return {
-            "primary": [("The bass was huge", 0.66), ("The instrument was huge", 0.31)],
-            "secondary": [("The fish was huge", 0.74), ("The bass was huge", 0.22)],
-        }
-    return {
-        "primary": [(text, 0.61), (f"{text} indeed", 0.3)],
-        "secondary": [(text, 0.58), (f"{text} truly", 0.24)],
-    }
 
 
 def save_graph(graph: TokenGraph, output_path: Path) -> None:
@@ -312,15 +235,43 @@ def run_experiment_rows(
     output_dir: Path,
     primary_weight: float = 0.45,
     secondary_weight: float = 0.55,
+    primary_adapter: Optional[BaseModelAdapter] = None,
+    secondary_adapter: Optional[BaseModelAdapter] = None,
 ) -> List[Dict[str, str]]:
-    primary = TinyPrimaryAdapter()
-    secondary = TinySecondaryAdapter()
+    """Run the fusion pipeline over *rows* of source sentences.
+
+    If *primary_adapter* or *secondary_adapter* are ``None`` the tiny stub
+    adapters are used (no model weights required).  Each row must have at
+    least a ``"text"`` key; optional keys are ``"context_before"``,
+    ``"source_lang"`` and ``"target_lang"`` (both default to the stub-adapter
+    defaults when absent).
+    """
+    # Defer import to avoid circular dependency at module level.
+    from model_adapters import TinyPrimaryAdapter, TinySecondaryAdapter
+
+    primary = primary_adapter if primary_adapter is not None else TinyPrimaryAdapter()
+    secondary = secondary_adapter if secondary_adapter is not None else TinySecondaryAdapter()
     summaries = []
     for idx, row in enumerate(rows):
         source = row["text"]
         context = row.get("context_before", "")
-        primary_graph = primary.build_token_graph(source, context, top_k_paths=2, min_path_probability=0.05)
-        secondary_graph = secondary.build_token_graph(source, context, top_k_paths=3, min_path_probability=0.12)
+        source_lang = row.get("source_lang", "spa_Latn")
+        target_lang = row.get("target_lang", "eng_Latn")
+
+        primary_graph = primary.build_token_graph(
+            source, context,
+            source_lang=source_lang,
+            target_lang=target_lang,
+            top_k_paths=2,
+            min_path_probability=0.05,
+        )
+        secondary_graph = secondary.build_token_graph(
+            source, context,
+            source_lang=source_lang,
+            target_lang=target_lang,
+            top_k_paths=3,
+            min_path_probability=0.12,
+        )
         merged = merge_graphs(
             primary_graph=primary_graph,
             secondary_graph=secondary_graph,
@@ -335,6 +286,8 @@ def run_experiment_rows(
             {
                 "source": source,
                 "context_before": context,
+                "source_lang": source_lang,
+                "target_lang": target_lang,
                 "primary_best": primary_graph.best_text,
                 "secondary_best": secondary_graph.best_text,
                 "final": merged.final_text,

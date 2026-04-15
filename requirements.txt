@@ -1,0 +1,6 @@
+# Core inference stack
+torch>=2.0.0
+transformers>=4.40.0
+sentencepiece>=0.1.99   # required by NLLB tokenizer
+protobuf>=3.20.0        # required by sentencepiece / protobuf-backed tokenizers
+accelerate>=0.26.0      # optional but recommended for large model loading
