@@ -41,10 +41,9 @@ Usage
     pip install datasets
     python evaluate_language_similarity.py
 
-    # Local eBible clone:
+    # Local eBible clone (--source is inferred automatically):
     git clone https://github.com/BibleNLP/ebible
-    python evaluate_language_similarity.py --source ebible-dir \\
-        --ebible-dir ebible/corpus
+    python evaluate_language_similarity.py --ebible-dir ebible/corpus
 
     # Built-in synthetic demo (no network or extra packages needed):
     python evaluate_language_similarity.py --source synthetic
@@ -467,22 +466,25 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--source",
         choices=["huggingface", "ebible-dir", "synthetic"],
-        default="huggingface",
+        default=None,
         help=(
             "Data source: 'huggingface' downloads from HuggingFace (requires "
             "the datasets package); 'ebible-dir' loads from a local eBible "
             "corpus directory (see --ebible-dir); 'synthetic' uses built-in "
-            "multilingual samples (no network or extra packages required)."
+            "multilingual samples (no network or extra packages required). "
+            "Defaults to 'ebible-dir' when --ebible-dir is given, otherwise "
+            "'huggingface'."
         ),
     )
     p.add_argument(
         "--ebible-dir",
-        default="corpus",
+        default=None,
         metavar="PATH",
         help=(
-            "Path to the eBible 'corpus/' directory (used with "
-            "--source ebible-dir).  Clone https://github.com/BibleNLP/ebible "
-            "and pass the path to its corpus/ sub-directory."
+            "Path to the eBible 'corpus/' directory.  Clone "
+            "https://github.com/BibleNLP/ebible and pass the path to its "
+            "corpus/ sub-directory.  Passing this option implicitly sets "
+            "--source ebible-dir unless --source is given explicitly."
         ),
     )
     p.add_argument("--trials", type=int, default=1000,
@@ -505,14 +507,21 @@ def _parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = _parse_args()
 
-    if args.source == "huggingface":
+    # Infer source when not given explicitly: presence of --ebible-dir implies
+    # the user wants to load from a local directory, not HuggingFace.
+    source = args.source
+    if source is None:
+        source = "ebible-dir" if args.ebible_dir is not None else "huggingface"
+
+    if source == "huggingface":
         by_lang = load_from_huggingface(
             min_verses=args.min_verses,
             max_languages=args.max_languages,
         )
-    elif args.source == "ebible-dir":
+    elif source == "ebible-dir":
+        ebible_dir = args.ebible_dir if args.ebible_dir is not None else "corpus"
         by_lang = load_from_ebible_dir(
-            args.ebible_dir,
+            ebible_dir,
             min_verses=args.min_verses,
             max_languages=args.max_languages,
         )
