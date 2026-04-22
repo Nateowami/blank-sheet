@@ -21,35 +21,27 @@ How the evaluation works
 
 Data sources  (``--source``)
 -----------------------------
-``huggingface`` (default)
-    Downloads ``bible-nlp/biblenlp-corpus`` from HuggingFace.
-    Requires:  ``pip install datasets``
-
-``ebible-dir``
+``ebible-dir`` (default when ``--ebible-dir`` is given)
     Loads from a locally cloned copy of https://github.com/BibleNLP/ebible.
     Point ``--ebible-dir`` at the ``corpus/`` sub-directory (which contains
     files named ``<lang>-<translation>.txt``, one verse per line).
     No extra packages required.
 
-``synthetic``
+``synthetic`` (default when ``--ebible-dir`` is not given)
     Uses built-in multilingual text samples to demonstrate the evaluation
     methodology without any network access or extra packages.
 
 Usage
 -----
-    # HuggingFace (requires network + datasets package):
-    pip install datasets
-    python evaluate_language_similarity.py
-
     # Local eBible clone (--source is inferred automatically):
     git clone https://github.com/BibleNLP/ebible
     python evaluate_language_similarity.py --ebible-dir ebible/corpus
 
+    # Tune the decision threshold using the optimal value from a previous run:
+    python evaluate_language_similarity.py --ebible-dir ebible/corpus --threshold 0.741
+
     # Built-in synthetic demo (no network or extra packages needed):
     python evaluate_language_similarity.py --source synthetic
-
-    # Tune the decision threshold:
-    python evaluate_language_similarity.py --threshold 0.6 --source synthetic
 """
 
 import argparse
@@ -59,36 +51,6 @@ import sys
 from collections import defaultdict
 
 from language_similarity import same_language, similarity_score
-
-
-# ---------------------------------------------------------------------------
-# Data loading — HuggingFace
-# ---------------------------------------------------------------------------
-
-def load_from_huggingface(min_verses: int = 200,
-                          max_languages: int | None = None) -> dict:
-    """Download and return the eBible corpus from HuggingFace.
-
-    Returns ``{lang_code: [verse_string, ...]}``
-    """
-    try:
-        from datasets import load_dataset  # type: ignore
-    except ImportError:
-        sys.exit(
-            "The 'datasets' package is required.  Install it with:\n"
-            "    pip install datasets"
-        )
-
-    print("Loading eBible corpus from HuggingFace (this may take a while)…")
-    ds = load_dataset("bible-nlp/biblenlp-corpus", split="train")
-
-    by_lang: dict = defaultdict(list)
-    for row in ds:
-        text = row["text"].strip()
-        if text:
-            by_lang[row["lang"]].append(text)
-
-    return _filter_languages(dict(by_lang), min_verses, max_languages)
 
 
 # ---------------------------------------------------------------------------
@@ -465,15 +427,14 @@ def _parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--source",
-        choices=["huggingface", "ebible-dir", "synthetic"],
+        choices=["ebible-dir", "synthetic"],
         default=None,
         help=(
-            "Data source: 'huggingface' downloads from HuggingFace (requires "
-            "the datasets package); 'ebible-dir' loads from a local eBible "
-            "corpus directory (see --ebible-dir); 'synthetic' uses built-in "
+            "Data source: 'ebible-dir' loads from a local eBible corpus "
+            "directory (see --ebible-dir); 'synthetic' uses built-in "
             "multilingual samples (no network or extra packages required). "
             "Defaults to 'ebible-dir' when --ebible-dir is given, otherwise "
-            "'huggingface'."
+            "'synthetic'."
         ),
     )
     p.add_argument(
@@ -508,17 +469,12 @@ if __name__ == "__main__":
     args = _parse_args()
 
     # Infer source when not given explicitly: presence of --ebible-dir implies
-    # the user wants to load from a local directory, not HuggingFace.
+    # the user wants to load from a local directory.
     source = args.source
     if source is None:
-        source = "ebible-dir" if args.ebible_dir is not None else "huggingface"
+        source = "ebible-dir" if args.ebible_dir is not None else "synthetic"
 
-    if source == "huggingface":
-        by_lang = load_from_huggingface(
-            min_verses=args.min_verses,
-            max_languages=args.max_languages,
-        )
-    elif source == "ebible-dir":
+    if source == "ebible-dir":
         ebible_dir = args.ebible_dir if args.ebible_dir is not None else "corpus"
         by_lang = load_from_ebible_dir(
             ebible_dir,
