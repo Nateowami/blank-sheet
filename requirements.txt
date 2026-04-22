@@ -1,0 +1,3 @@
+# Runtime dependency for the evaluation script.
+# language_similarity.py itself needs no external packages.
+datasets>=2.14.0
