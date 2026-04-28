@@ -317,7 +317,11 @@ async function doBack(page: Page): Promise<string> {
 }
 
 async function doWait(action: Action): Promise<string> {
-  const seconds = Math.min(Math.max((action.seconds as number) ?? 2, 0.5), 10);
+  const raw = Number(action.seconds);
+  if (isNaN(raw)) {
+    return `❌ "wait" requires a numeric "seconds" field.\n  Example: {"action": "wait", "seconds": 3}`;
+  }
+  const seconds = Math.min(Math.max(raw, 0.5), 10);
   await new Promise((r) => setTimeout(r, seconds * 1000));
   return `✅ Waited ${seconds} second(s).`;
 }
@@ -430,7 +434,7 @@ async function main() {
   console.log(`📋 Objective loaded from ${objectivePath}`);
 
   // Create run directory
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const timestamp = new Date().toISOString().replace(/[:.TZ]/g, "-").replace(/-$/, "");
   const runDir = path.join("runs", timestamp);
   await Deno.mkdir(runDir, { recursive: true });
 
