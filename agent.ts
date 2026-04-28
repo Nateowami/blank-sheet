@@ -7,7 +7,7 @@
  * actions. A full conversation log (with screenshots) is saved as markdown.
  */
 
-import { chromium, type Page, type Browser } from "npm:playwright@1.56.1";
+import { chromium, type Page, type Browser, type Locator } from "npm:playwright@1.56.1";
 import * as path from "https://deno.land/std@0.224.0/path/mod.ts";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -127,11 +127,25 @@ async function getPageState(page: Page): Promise<string> {
 
     const interactive: string[] = [];
     for (const el of els) {
-      // Skip hidden elements
+      const htmlEl = el as HTMLElement;
+
+      // Skip hidden elements — check the element AND its ancestors
       const style = window.getComputedStyle(el);
       if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") continue;
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) continue;
+
+      // offsetParent is null when element or any ancestor has display:none
+      // (except for body, fixed, and sticky elements)
+      if (
+        htmlEl.offsetParent === null &&
+        style.position !== "fixed" &&
+        style.position !== "sticky" &&
+        el.tagName.toLowerCase() !== "body"
+      ) continue;
+
+      // Skip elements inside aria-hidden containers
+      if (el.closest('[aria-hidden="true"]')) continue;
 
       const tag = el.tagName.toLowerCase();
       const type = el.getAttribute("type") ?? "";
@@ -217,6 +231,22 @@ const ACTION_HELP: Record<string, string> = {
 
 const AVAILABLE_ACTIONS = Object.keys(ACTION_HELP);
 
+/**
+ * Filter a Playwright locator down to only visible elements.
+ * Returns { locator, indices } where indices maps filtered positions to original positions.
+ */
+async function filterVisible(loc: Locator): Promise<{ count: number; nthVisible: (n: number) => Locator }> {
+  const total = await loc.count();
+  const visibleIndices: number[] = [];
+  for (let i = 0; i < total; i++) {
+    if (await loc.nth(i).isVisible()) visibleIndices.push(i);
+  }
+  return {
+    count: visibleIndices.length,
+    nthVisible: (n: number) => loc.nth(visibleIndices[n]),
+  };
+}
+
 async function executeAction(
   page: Page,
   action: Action,
@@ -257,41 +287,39 @@ async function doClick(page: Page, action: Action): Promise<string> {
   // Also try a case-insensitive contains match as a fallback
   const looseText = page.getByText(text, { exact: false });
 
-  // Determine which locator to use
-  let locator = exactText;
-  let count = await exactText.count();
+  // Determine which locator to use — only count visible elements
+  let visible = await filterVisible(exactText);
 
-  if (count === 0) {
-    locator = looseText;
-    count = await looseText.count();
+  if (visible.count === 0) {
+    visible = await filterVisible(looseText);
   }
 
-  if (count === 0) {
+  if (visible.count === 0) {
     return `❌ No element found matching text "${text}". Check the interactive elements list and try a different text value.`;
   }
 
   const index = (action.index as number | undefined) ?? 0;
-  if (count > 1 && action.index === undefined) {
-    // Gather descriptions of matching elements so the model can pick
+  if (visible.count > 1 && action.index === undefined) {
+    // Gather descriptions of matching visible elements so the model can pick
     const descriptions: string[] = [];
-    for (let i = 0; i < Math.min(count, 10); i++) {
-      const el = locator.nth(i);
+    for (let i = 0; i < Math.min(visible.count, 10); i++) {
+      const el = visible.nthVisible(i);
       const tag = await el.evaluate((e) => e.tagName.toLowerCase());
       const innerText = await el.evaluate((e) =>
         (e.textContent ?? "").trim().slice(0, 60),
       );
       descriptions.push(`  [${i}] <${tag}> "${innerText}"`);
     }
-    return `⚠️ Multiple elements (${count}) match "${text}". Please specify which one with "index":\n${descriptions.join("\n")}\n  Example: {"action": "click", "text": "${text}", "index": 0}`;
+    return `⚠️ Multiple elements (${visible.count}) match "${text}". Please specify which one with "index":\n${descriptions.join("\n")}\n  Example: {"action": "click", "text": "${text}", "index": 0}`;
   }
 
-  if (index >= count) {
-    return `❌ Index ${index} is out of range. Only ${count} element(s) match "${text}". Use index 0 to ${count - 1}.`;
+  if (index >= visible.count) {
+    return `❌ Index ${index} is out of range. Only ${visible.count} element(s) match "${text}". Use index 0 to ${visible.count - 1}.`;
   }
 
   try {
-    await locator.nth(index).click({ timeout: 5000 });
-    return `✅ Clicked element matching "${text}"${count > 1 ? ` (index ${index})` : ""}.`;
+    await visible.nthVisible(index).click({ timeout: 5000 });
+    return `✅ Clicked element matching "${text}"${visible.count > 1 ? ` (index ${index})` : ""}.`;
   } catch (e) {
     return `❌ Failed to click "${text}": ${(e as Error).message}. The element may be obscured or not clickable.`;
   }
@@ -316,34 +344,31 @@ async function doType(page: Page, action: Action): Promise<string> {
   const byPlaceholder = page.locator(`[placeholder="${field}"], [aria-label="${field}"]`);
   const byLabel = page.getByLabel(field, { exact: false });
 
-  let locator = byPlaceholder;
-  let count = await byPlaceholder.count();
+  let visible = await filterVisible(byPlaceholder);
 
-  if (count === 0) {
-    locator = byLabel;
-    count = await byLabel.count();
+  if (visible.count === 0) {
+    visible = await filterVisible(byLabel);
   }
 
   // Fallback: look for any input/textarea near the matching text
-  if (count === 0) {
+  if (visible.count === 0) {
     const byRole = page.getByRole("textbox", { name: field });
-    count = await byRole.count();
-    if (count > 0) locator = byRole;
+    visible = await filterVisible(byRole);
   }
 
-  if (count === 0) {
+  if (visible.count === 0) {
     return `❌ No input/textarea found matching field "${field}". Check the interactive elements list for the correct placeholder, aria-label, or label.`;
   }
 
   const index = (action.index as number | undefined) ?? 0;
-  if (count > 1 && action.index === undefined) {
-    return `⚠️ Multiple inputs (${count}) match field "${field}". Specify which one with "index" (0-${count - 1}).`;
+  if (visible.count > 1 && action.index === undefined) {
+    return `⚠️ Multiple inputs (${visible.count}) match field "${field}". Specify which one with "index" (0-${visible.count - 1}).`;
   }
 
   try {
-    await locator.nth(index).fill(value, { timeout: 5000 });
+    await visible.nthVisible(index).fill(value, { timeout: 5000 });
     if (action.submit) {
-      await locator.nth(index).press("Enter", { timeout: 5000 });
+      await visible.nthVisible(index).press("Enter", { timeout: 5000 });
       return `✅ Typed "${value}" into field "${field}" and pressed Enter.`;
     }
     return `✅ Typed "${value}" into field "${field}".`;
@@ -418,10 +443,17 @@ function doHelp(action: Action): string {
 // ─── Parse model response ───────────────────────────────────────────────────
 
 function parseAction(raw: string): Action | string {
+  // Strip markdown fences if present (models sometimes wrap JSON in ```json ... ```)
+  let cleaned = raw;
+  const fenceMatch = raw.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  }
+
   // Try to extract JSON from the response (the model may include extra text)
-  const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+  const jsonMatch = cleaned.match(/\{[\s\S]*?\}/);
   if (!jsonMatch) {
-    return `❌ Could not find a JSON action in your response. Please respond with a JSON object, e.g.:\n  {"action": "click", "text": "Log in"}\n\nAvailable actions: ${AVAILABLE_ACTIONS.join(", ")}`;
+    return `❌ Could not find a JSON action in your response. Please respond with ONLY a JSON object, e.g.:\n  {"action": "click", "text": "Log in"}\n\nAvailable actions: ${AVAILABLE_ACTIONS.join(", ")}`;
   }
   try {
     const parsed = JSON.parse(jsonMatch[0]);
@@ -437,14 +469,18 @@ function parseAction(raw: string): Action | string {
 // ─── System prompt ──────────────────────────────────────────────────────────
 
 function buildSystemPrompt(objective: string): string {
+  const pageDescription = SEND_SCREENSHOT
+    ? "Each turn you receive a screenshot and a text description of the current page (URL, title, interactive elements, visible text)."
+    : "Each turn you receive a text description of the current page (URL, title, interactive elements, visible text).";
+
   return `You are a web browsing agent. You interact with web pages by responding with a single JSON action per turn.
 
 ## Your objective
 ${objective}
 
 ## How it works
-1. Each turn you receive a screenshot and a description of the current page state (URL, title, interactive elements, visible text).
-2. You respond with exactly ONE JSON action. Do not include any other text—just the JSON.
+1. ${pageDescription}
+2. You respond with exactly ONE JSON action.
 3. You will then be told the result and shown the updated page.
 
 ## Available actions
@@ -453,7 +489,10 @@ ${Object.entries(ACTION_HELP)
   .join("\n\n")}
 
 ## Rules
-- Respond with only a JSON object each turn. No commentary, no markdown fences.
+- **CRITICAL: Your entire response must be a single JSON object. No thinking, no explanation, no markdown fences — ONLY the raw JSON.**
+- Good: {"action": "click", "text": "Log in"}
+- Bad: I need to click the login button. {"action": "click", "text": "Log in"}
+- Bad: \`\`\`json\\n{"action": "click", "text": "Log in"}\\n\`\`\`
 - Use the interactive elements list and visible text to identify what to click or type.
 - If you need to pick from multiple matches, specify "index".
 - When you have accomplished the objective, use the "done" action with a summary.
