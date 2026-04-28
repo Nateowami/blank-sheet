@@ -35,18 +35,22 @@ All configuration is via environment variables:
 | `OLLAMA_MODEL`  | `gemma3:27b`                | Model name to use                |
 | `MAX_TURNS`     | `40`                        | Maximum agent turns              |
 | `ACTION_DELAY_MS` | `2000`                    | Pause (ms) after each action     |
+| `SEND_SCREENSHOT` | `true`                    | Send screenshots to the model    |
+| `HEADLESS`      | `true`                      | Run the browser in headless mode |
 
 ## How it works
 
 1. The agent reads an objective from a markdown file.
-2. It launches a headless Chromium browser via Playwright.
+2. It launches a Chromium browser via Playwright (headless by default; set `HEADLESS=false` to watch).
 3. Each turn, the model receives:
-   - A screenshot of the current page
+   - A screenshot of the current page (disable with `SEND_SCREENSHOT=false`)
    - A text description of the page (URL, title, interactive elements, visible text)
 4. The model responds with a single JSON action, e.g. `{"action": "click", "text": "Log in"}`.
 5. The agent executes the action, waits briefly, and repeats.
 6. If the model makes a mistake (bad action name, missing argument), it receives
    a helpful error message explaining what went wrong and how to fix it.
+   If the same action fails twice in a row, the full documentation for that action
+   is automatically included.
 7. The run ends when the model uses the `"done"` action or hits the turn limit.
 
 ## Available actions

@@ -16,6 +16,8 @@ const OLLAMA_BASE = Deno.env.get("OLLAMA_BASE") ?? "http://localhost:11434";
 const MODEL = Deno.env.get("OLLAMA_MODEL") ?? "gemma3:27b";
 const MAX_TURNS = parseInt(Deno.env.get("MAX_TURNS") ?? "40", 10);
 const ACTION_DELAY_MS = parseInt(Deno.env.get("ACTION_DELAY_MS") ?? "2000", 10);
+const SEND_SCREENSHOT = (Deno.env.get("SEND_SCREENSHOT") ?? "true").toLowerCase() === "true";
+const HEADLESS = (Deno.env.get("HEADLESS") ?? "true").toLowerCase() !== "false";
 const OBJECTIVE_FILE = Deno.args[0] ?? "objective.md";
 const VIEWPORT = { width: 1280, height: 900 };
 
@@ -513,7 +515,7 @@ async function main() {
 
   // Launch browser
   console.log("🌐 Launching browser...");
-  const browser: Browser = await chromium.launch({ headless: true });
+  const browser: Browser = await chromium.launch({ headless: HEADLESS });
   const context = await browser.newContext({ viewport: VIEWPORT });
   const page: Page = await context.newPage();
   await page.goto("about:blank");
@@ -524,6 +526,9 @@ async function main() {
   ];
 
   let done = false;
+
+  // Track consecutive failures per action for auto-help
+  const consecutiveFailures: Record<string, number> = {};
 
   for (let turn = 1; turn <= MAX_TURNS && !done; turn++) {
     console.log(`\n═══ Turn ${turn}/${MAX_TURNS} ═══`);
@@ -540,12 +545,15 @@ async function main() {
 
     console.log(`  URL: ${page.url()}`);
 
-    // Send page state + screenshot to model
-    messages.push({
+    // Send page state + optionally screenshot to model
+    const userMessage: OllamaMessage = {
       role: "user",
       content: pageState + "\n\nRespond with your next action as a JSON object.",
-      images: [screenshotB64],
-    });
+    };
+    if (SEND_SCREENSHOT) {
+      userMessage.images = [screenshotB64];
+    }
+    messages.push(userMessage);
 
     // Get model response
     console.log("  🤖 Asking model...");
@@ -577,7 +585,19 @@ async function main() {
     console.log(`  Action: ${JSON.stringify(action)}`);
 
     // Execute action
-    const result = await executeAction(page, action);
+    let result = await executeAction(page, action);
+    const isError = result.startsWith("❌") || result.startsWith("⚠️");
+
+    // Track consecutive failures per action and provide full docs on 2nd failure
+    if (isError) {
+      consecutiveFailures[action.action] = (consecutiveFailures[action.action] ?? 0) + 1;
+      if (consecutiveFailures[action.action] >= 2 && ACTION_HELP[action.action]) {
+        result += `\n\n📖 Full documentation for "${action.action}":\n${ACTION_HELP[action.action]}`;
+      }
+    } else {
+      consecutiveFailures[action.action] = 0;
+    }
+
     console.log(`  Result: ${result.slice(0, 120)}`);
     log.addText(`### Result\n\n${result}\n`);
 
