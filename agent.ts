@@ -16,7 +16,7 @@ const OLLAMA_BASE = Deno.env.get("OLLAMA_BASE") ?? "http://localhost:11434";
 const MODEL = Deno.env.get("OLLAMA_MODEL") ?? "gemma3:27b";
 const MAX_TURNS = parseInt(Deno.env.get("MAX_TURNS") ?? "40", 10);
 const ACTION_DELAY_MS = parseInt(Deno.env.get("ACTION_DELAY_MS") ?? "2000", 10);
-const SEND_SCREENSHOT = (Deno.env.get("SEND_SCREENSHOT") ?? "true").toLowerCase() === "true";
+const SEND_SCREENSHOT = (Deno.env.get("SEND_SCREENSHOT") ?? "true").toLowerCase() !== "false";
 const HEADLESS = (Deno.env.get("HEADLESS") ?? "true").toLowerCase() !== "false";
 const OBJECTIVE_FILE = Deno.args[0] ?? "objective.md";
 const VIEWPORT = { width: 1280, height: 900 };
