@@ -492,7 +492,7 @@ ${Object.entries(ACTION_HELP)
 - **CRITICAL: Your entire response must be a single JSON object. No thinking, no explanation, no markdown fences — ONLY the raw JSON.**
 - Good: {"action": "click", "text": "Log in"}
 - Bad: I need to click the login button. {"action": "click", "text": "Log in"}
-- Bad: \`\`\`json\\n{"action": "click", "text": "Log in"}\\n\`\`\`
+- Bad: \`\`\`json {"action": "click", "text": "Log in"} \`\`\`
 - Use the interactive elements list and visible text to identify what to click or type.
 - If you need to pick from multiple matches, specify "index".
 - When you have accomplished the objective, use the "done" action with a summary.
