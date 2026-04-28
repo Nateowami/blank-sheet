@@ -7,7 +7,7 @@
  * actions. A full conversation log (with screenshots) is saved as markdown.
  */
 
-import { chromium, type Page, type Browser } from "npm:playwright@1.52.0";
+import { chromium, type Page, type Browser } from "npm:playwright@1.56.1";
 import * as path from "https://deno.land/std@0.224.0/path/mod.ts";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -32,7 +32,13 @@ interface OllamaMessage {
   images?: string[]; // base64-encoded images
 }
 
-// ─── Ollama API ─────────────────────────────────────────────────────────────
+// ─── Terminal Colors ────────────────────────────────────────────────────────
+
+const GREY = "\x1b[90m";
+const CYAN = "\x1b[36m";
+const RESET = "\x1b[0m";
+
+// ─── Ollama API (streaming) ─────────────────────────────────────────────────
 
 async function chatOllama(
   messages: OllamaMessage[],
@@ -40,14 +46,69 @@ async function chatOllama(
   const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, stream: false }),
+    body: JSON.stringify({ model: MODEL, messages, stream: true }),
   });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Ollama error ${res.status}: ${text}`);
   }
-  const json = await res.json();
-  return json.message?.content ?? "";
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response body from Ollama");
+
+  const decoder = new TextDecoder();
+  let fullContent = "";
+  let buffer = "";
+  const encoder = new TextEncoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    // Process complete JSON lines from the buffer
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? ""; // keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const chunk = JSON.parse(line);
+        // Stream thinking tokens in grey
+        if (chunk.message?.thinking) {
+          await Deno.stdout.write(encoder.encode(`${GREY}${chunk.message.thinking}${RESET}`));
+        }
+        // Stream content tokens in cyan
+        if (chunk.message?.content) {
+          fullContent += chunk.message.content;
+          await Deno.stdout.write(encoder.encode(`${CYAN}${chunk.message.content}${RESET}`));
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
+  }
+
+  // Process any remaining buffer
+  if (buffer.trim()) {
+    try {
+      const chunk = JSON.parse(buffer);
+      if (chunk.message?.thinking) {
+        await Deno.stdout.write(encoder.encode(`${GREY}${chunk.message.thinking}${RESET}`));
+      }
+      if (chunk.message?.content) {
+        fullContent += chunk.message.content;
+        await Deno.stdout.write(encoder.encode(`${CYAN}${chunk.message.content}${RESET}`));
+      }
+    } catch {
+      // skip
+    }
+  }
+
+  // End the streaming line
+  await Deno.stdout.write(encoder.encode("\n"));
+
+  return fullContent;
 }
 
 // ─── Page State ─────────────────────────────────────────────────────────────
@@ -137,7 +198,7 @@ const ACTION_HELP: Record<string, string> = {
   click:
     'Click an element by its visible text, aria-label, or placeholder.\n  Format: {"action": "click", "text": "Log in"}\n  Optional: {"action": "click", "text": "Submit", "index": 0} when multiple matches exist.',
   type:
-    'Type text into an input/textarea identified by placeholder, aria-label, or nearby label text.\n  Format: {"action": "type", "text": "search box placeholder or label", "input": "hello world"}\n  Optional: add "submit": true to press Enter after typing.',
+    'Type into an input or textarea. "field" identifies the element (by placeholder, aria-label, or label). "value" is what to type.\n  Format: {"action": "type", "field": "Search Wikipedia", "value": "Deno (software)"}\n  Optional: add "submit": true to press Enter after typing.',
   scroll:
     'Scroll the page up or down.\n  Format: {"action": "scroll", "direction": "down"}\n  Valid directions: "up", "down".',
   goto:
@@ -235,18 +296,23 @@ async function doClick(page: Page, action: Action): Promise<string> {
 }
 
 async function doType(page: Page, action: Action): Promise<string> {
-  const text = action.text as string | undefined;
-  const input = action.input as string | undefined;
-  if (!text) {
-    return `❌ "type" requires a "text" field — the placeholder, aria-label, or label of the input.\n  Example: {"action": "type", "text": "Search", "input": "hello"}`;
+  const field = action.field as string | undefined;
+  const value = action.value as string | undefined;
+
+  // Detect common mistake: using old "text"/"input" field names
+  if (!field && action.text) {
+    return `❌ "type" uses "field" (which element) and "value" (what to type), not "text"/"input".\n  Example: {"action": "type", "field": "Search Wikipedia", "value": "Deno (software)"}`;
   }
-  if (input === undefined) {
-    return `❌ "type" requires an "input" field — the text to type.\n  Example: {"action": "type", "text": "Search", "input": "hello"}`;
+  if (!field) {
+    return `❌ "type" requires a "field" — the placeholder, aria-label, or label that identifies the input.\n  Example: {"action": "type", "field": "Search Wikipedia", "value": "Deno (software)"}`;
+  }
+  if (value === undefined) {
+    return `❌ "type" requires a "value" — the text to type into the field.\n  Example: {"action": "type", "field": "Search Wikipedia", "value": "Deno (software)"}`;
   }
 
   // Try to find by placeholder, aria-label, or label
-  const byPlaceholder = page.locator(`[placeholder="${text}"], [aria-label="${text}"]`);
-  const byLabel = page.getByLabel(text, { exact: false });
+  const byPlaceholder = page.locator(`[placeholder="${field}"], [aria-label="${field}"]`);
+  const byLabel = page.getByLabel(field, { exact: false });
 
   let locator = byPlaceholder;
   let count = await byPlaceholder.count();
@@ -258,29 +324,29 @@ async function doType(page: Page, action: Action): Promise<string> {
 
   // Fallback: look for any input/textarea near the matching text
   if (count === 0) {
-    const byRole = page.getByRole("textbox", { name: text });
+    const byRole = page.getByRole("textbox", { name: field });
     count = await byRole.count();
     if (count > 0) locator = byRole;
   }
 
   if (count === 0) {
-    return `❌ No input/textarea found matching "${text}". Check the interactive elements list for the correct placeholder, aria-label, or label.`;
+    return `❌ No input/textarea found matching field "${field}". Check the interactive elements list for the correct placeholder, aria-label, or label.`;
   }
 
   const index = (action.index as number | undefined) ?? 0;
   if (count > 1 && action.index === undefined) {
-    return `⚠️ Multiple inputs (${count}) match "${text}". Specify which one with "index" (0-${count - 1}).`;
+    return `⚠️ Multiple inputs (${count}) match field "${field}". Specify which one with "index" (0-${count - 1}).`;
   }
 
   try {
-    await locator.nth(index).fill(input, { timeout: 5000 });
+    await locator.nth(index).fill(value, { timeout: 5000 });
     if (action.submit) {
       await locator.nth(index).press("Enter", { timeout: 5000 });
-      return `✅ Typed "${input}" into "${text}" and pressed Enter.`;
+      return `✅ Typed "${value}" into field "${field}" and pressed Enter.`;
     }
-    return `✅ Typed "${input}" into "${text}".`;
+    return `✅ Typed "${value}" into field "${field}".`;
   } catch (e) {
-    return `❌ Failed to type into "${text}": ${(e as Error).message}.`;
+    return `❌ Failed to type into field "${field}": ${(e as Error).message}.`;
   }
 }
 
@@ -489,10 +555,10 @@ async function main() {
     } catch (e) {
       console.error(`  ❌ Ollama error: ${(e as Error).message}`);
       log.addText(`\n**Ollama error**: ${(e as Error).message}\n`);
+      await log.save();
       break;
     }
 
-    console.log(`  Model: ${response.slice(0, 200)}`);
     messages.push({ role: "assistant", content: response });
     log.addText(`### Model response\n\n\`\`\`json\n${response}\n\`\`\`\n`);
 
@@ -503,6 +569,7 @@ async function main() {
       console.log(`  ${actionOrError.slice(0, 120)}`);
       log.addText(`### Result\n\n${actionOrError}\n`);
       messages.push({ role: "user", content: actionOrError });
+      await log.save();
       continue;
     }
 
@@ -516,8 +583,12 @@ async function main() {
 
     if (action.action === "done") {
       done = true;
+      await log.save();
       break;
     }
+
+    // Save log after each turn
+    await log.save();
 
     // Pause briefly to let the page settle
     await new Promise((r) => setTimeout(r, ACTION_DELAY_MS));

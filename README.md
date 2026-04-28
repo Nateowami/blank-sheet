@@ -54,7 +54,7 @@ All configuration is via environment variables:
 | Action   | Description                              | Example                                                    |
 | -------- | ---------------------------------------- | ---------------------------------------------------------- |
 | `click`  | Click an element by visible text/label   | `{"action": "click", "text": "Log in"}`                   |
-| `type`   | Type into an input by placeholder/label  | `{"action": "type", "text": "Search", "input": "hello"}`  |
+| `type`   | Type into an input by placeholder/label  | `{"action": "type", "field": "Search", "value": "hello"}` |
 | `scroll` | Scroll the page up or down               | `{"action": "scroll", "direction": "down"}`                |
 | `goto`   | Navigate to a URL                        | `{"action": "goto", "url": "https://example.com"}`        |
 | `back`   | Go to the previous page                  | `{"action": "back"}`                                       |
