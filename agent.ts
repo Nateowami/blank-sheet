@@ -300,7 +300,7 @@ async function doType(page: Page, action: Action): Promise<string> {
   const value = action.value as string | undefined;
 
   // Detect common mistake: using old "text"/"input" field names
-  if (!field && action.text) {
+  if (!field && (action.text || action.input)) {
     return `❌ "type" uses "field" (which element) and "value" (what to type), not "text"/"input".\n  Example: {"action": "type", "field": "Search Wikipedia", "value": "Deno (software)"}`;
   }
   if (!field) {
