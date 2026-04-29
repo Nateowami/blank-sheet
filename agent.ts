@@ -233,6 +233,12 @@ function base64Encode(bytes: Uint8Array): string {
 
 // ─── Actions ────────────────────────────────────────────────────────────────
 
+// Playwright selector that matches only interactive/actionable elements.
+// Used by doClick to avoid matching headings, paragraphs, or other non-interactive
+// elements that happen to contain the same text as a nearby button or link.
+const ACTIONABLE_SELECTOR =
+  'a, button, input, select, textarea, [role="button"], [role="link"], [role="tab"]';
+
 const ACTION_HELP: Record<string, string> = {
   click:
     'Click an element by its visible text, aria-label, or placeholder.\n  Format: {"action": "click", "text": "Log in"}\n  Optional: {"action": "click", "text": "Submit", "index": 0} when multiple matches exist.',
@@ -302,20 +308,35 @@ async function doClick(page: Page, action: Action): Promise<string> {
     return `❌ "click" requires a "text" field — the visible text, aria-label, or placeholder of the element to click.\n  Example: {"action": "click", "text": "Log in"}`;
   }
 
-  // Build locator: try text, then aria-label, then placeholder
-  const exactText = page.locator(
-    `text="${text}", [aria-label="${text}"], [placeholder="${text}"], [title="${text}"], [alt="${text}"]`,
+  // Escape text for safe use inside a RegExp literal.
+  const esc = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // ── Step 1: attribute match on any element (aria-label, placeholder, etc.)
+  // These attributes are almost exclusively on interactive elements, so matching
+  // any element with them is safe.
+  const byAttr = page.locator(
+    `[aria-label="${text}"], [placeholder="${text}"], [title="${text}"], [alt="${text}"], [value="${text}"]`,
   );
 
-  // Also try a case-insensitive contains match as a fallback
-  const looseText = page.getByText(text, { exact: false });
+  // ── Step 2: text-content match restricted to actionable elements only.
+  // By searching within ACTIONABLE_SELECTOR we never match headings, paragraphs,
+  // or other non-interactive elements that contain the same text as a nearby button.
+  //   2a. Exact text (full element text = search term, case-insensitive)
+  const actionableExact = page
+    .locator(ACTIONABLE_SELECTOR)
+    .filter({ hasText: new RegExp(`^${esc}$`, "i") });
+  //   2b. Loose (element text contains the search term, case-insensitive)
+  const actionableLoose = page
+    .locator(ACTIONABLE_SELECTOR)
+    .filter({ hasText: new RegExp(esc, "i") });
 
-  // Determine which locator to use — only count visible elements
-  let visible = await filterVisible(exactText);
+  // ── Step 3: last-resort — any visible element (covers tabindex widgets, etc.)
+  const anyByText = page.getByText(text, { exact: false });
 
-  if (visible.count === 0) {
-    visible = await filterVisible(looseText);
-  }
+  let visible = await filterVisible(byAttr);
+  if (visible.count === 0) visible = await filterVisible(actionableExact);
+  if (visible.count === 0) visible = await filterVisible(actionableLoose);
+  if (visible.count === 0) visible = await filterVisible(anyByText);
 
   if (visible.count === 0) {
     return `❌ No element found matching text "${text}". Check the interactive elements list and try a different text value.`;
@@ -323,32 +344,9 @@ async function doClick(page: Page, action: Action): Promise<string> {
 
   const index = (action.index as number | undefined) ?? 0;
   if (visible.count > 1 && action.index === undefined) {
-    // Prioritize actionable elements (buttons, links, inputs) over non-actionable (headings, divs, spans)
-    const actionableTags = new Set(["button", "a", "input", "textarea", "select"]);
-    const actionableIndices: number[] = [];
-    for (let i = 0; i < visible.count; i++) {
-      const el = visible.nthVisible(i);
-      const tag = await el.evaluate((e) => e.tagName.toLowerCase());
-      const role = await el.evaluate((e) => e.getAttribute("role") ?? "");
-      if (actionableTags.has(tag) || role === "button" || role === "link") {
-        actionableIndices.push(i);
-      }
-    }
-
-    // If exactly one actionable element, use it directly
-    if (actionableIndices.length === 1) {
-      try {
-        await visible.nthVisible(actionableIndices[0]).click({ timeout: 5000 });
-        return `✅ Clicked element matching "${text}".`;
-      } catch (e) {
-        return `❌ Failed to click "${text}": ${(e as Error).message}. The element may be obscured or not clickable.`;
-      }
-    }
-
-    // Otherwise ask the model to disambiguate (but only show actionable elements if any exist)
-    const showIndices = actionableIndices.length > 1 ? actionableIndices : Array.from({length: Math.min(visible.count, 10)}, (_, i) => i);
+    // Gather descriptions of matching visible elements so the model can pick
     const descriptions: string[] = [];
-    for (const i of showIndices) {
+    for (let i = 0; i < Math.min(visible.count, 10); i++) {
       const el = visible.nthVisible(i);
       const tag = await el.evaluate((e) => e.tagName.toLowerCase());
       const innerText = await el.evaluate((e) =>
@@ -696,7 +694,7 @@ async function main() {
       consecutiveFailures[action.action] = 0;
     }
 
-    console.log(`  Result: ${result.slice(0, 120)}`);
+    console.log(`  Result: ${result.slice(0, 300)}`);
     log.addText(`### Result\n\n${result}\n`);
 
     if (action.action === "done") {
