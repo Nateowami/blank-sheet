@@ -40,6 +40,29 @@ const GREY = "\x1b[90m";
 const CYAN = "\x1b[36m";
 const RESET = "\x1b[0m";
 
+// ─── JSON Schema for Ollama structured output ──────────────────────────────
+
+const ACTION_SCHEMA = {
+  type: "object",
+  properties: {
+    action: {
+      type: "string",
+      enum: ["click", "type", "scroll", "goto", "back", "wait", "done", "help"],
+    },
+    text: { type: "string" },
+    index: { type: "integer" },
+    field: { type: "string" },
+    value: { type: "string" },
+    submit: { type: "boolean" },
+    direction: { type: "string", enum: ["up", "down"] },
+    url: { type: "string" },
+    seconds: { type: "number" },
+    summary: { type: "string" },
+    topic: { type: "string" },
+  },
+  required: ["action"],
+};
+
 // ─── Ollama API (streaming) ─────────────────────────────────────────────────
 
 async function chatOllama(
@@ -48,7 +71,7 @@ async function chatOllama(
   const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, stream: true }),
+    body: JSON.stringify({ model: MODEL, messages, stream: true, format: ACTION_SCHEMA }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -300,9 +323,32 @@ async function doClick(page: Page, action: Action): Promise<string> {
 
   const index = (action.index as number | undefined) ?? 0;
   if (visible.count > 1 && action.index === undefined) {
-    // Gather descriptions of matching visible elements so the model can pick
+    // Prioritize actionable elements (buttons, links, inputs) over non-actionable (headings, divs, spans)
+    const actionableTags = new Set(["button", "a", "input", "textarea", "select"]);
+    const actionableIndices: number[] = [];
+    for (let i = 0; i < visible.count; i++) {
+      const el = visible.nthVisible(i);
+      const tag = await el.evaluate((e) => e.tagName.toLowerCase());
+      const role = await el.evaluate((e) => e.getAttribute("role") ?? "");
+      if (actionableTags.has(tag) || role === "button" || role === "link") {
+        actionableIndices.push(i);
+      }
+    }
+
+    // If exactly one actionable element, use it directly
+    if (actionableIndices.length === 1) {
+      try {
+        await visible.nthVisible(actionableIndices[0]).click({ timeout: 5000 });
+        return `✅ Clicked element matching "${text}".`;
+      } catch (e) {
+        return `❌ Failed to click "${text}": ${(e as Error).message}. The element may be obscured or not clickable.`;
+      }
+    }
+
+    // Otherwise ask the model to disambiguate (but only show actionable elements if any exist)
+    const showIndices = actionableIndices.length > 1 ? actionableIndices : Array.from({length: Math.min(visible.count, 10)}, (_, i) => i);
     const descriptions: string[] = [];
-    for (let i = 0; i < Math.min(visible.count, 10); i++) {
+    for (const i of showIndices) {
       const el = visible.nthVisible(i);
       const tag = await el.evaluate((e) => e.tagName.toLowerCase());
       const innerText = await el.evaluate((e) =>
@@ -443,6 +489,18 @@ function doHelp(action: Action): string {
 // ─── Parse model response ───────────────────────────────────────────────────
 
 function parseAction(raw: string): Action | string {
+  // With Ollama's format schema enforcement, the response should be pure JSON.
+  // Try parsing directly first.
+  const trimmed = raw.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed.action && typeof parsed.action === "string") {
+      return parsed as Action;
+    }
+  } catch {
+    // Fall through to extraction logic
+  }
+
   // Strip markdown fences if present (models sometimes wrap JSON in ```json ... ```)
   let cleaned = raw;
   const fenceMatch = raw.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
@@ -489,7 +547,8 @@ ${Object.entries(ACTION_HELP)
   .join("\n\n")}
 
 ## Rules
-- **CRITICAL: Your entire response must be a single JSON object. No thinking, no explanation, no markdown fences — ONLY the raw JSON.**
+- **CRITICAL: Your entire response must be a single JSON object matching the action schema. No thinking, no explanation, no markdown fences — ONLY the raw JSON.**
+- The output format is enforced. You MUST output valid JSON with an "action" field.
 - Good: {"action": "click", "text": "Log in"}
 - Bad: I need to click the login button. {"action": "click", "text": "Log in"}
 - Bad: \`\`\`json {"action": "click", "text": "Log in"} \`\`\`
