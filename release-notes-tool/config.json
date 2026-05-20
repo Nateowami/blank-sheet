@@ -1,0 +1,23 @@
+{
+  "github_repo": "owner/repo",
+  "base_branch": "sf-live",
+  "head_branch": "sf-qa",
+  "app_context_path": "./app-context.md",
+  "prs_dir": "./prs",
+  "releases_dir": "./releases",
+  "logs_dir": "./logs",
+  "diff": {
+    "max_tokens_per_pr": 50000,
+    "excluded_file_patterns": [
+      "package-lock.json",
+      "yarn.lock",
+      "*.lock",
+      "*.min.js",
+      "*.min.css",
+      "dist/**",
+      "build/**",
+      "*.generated.*",
+      "migrations/**"
+    ]
+  }
+}
