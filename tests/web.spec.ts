@@ -425,6 +425,7 @@ test("export CSV - clicking Export CSV triggers download with expected columns",
   expect(csvText).toContain("Key");
   expect(csvText).toContain("Summary");
   expect(csvText).toContain("Category");
-  expect(csvText).toContain("Priority Score");
+  expect(csvText).toContain("Impact");
+  expect(csvText).toContain("Overall Score");
   expect(csvText).toContain("Recommended Action");
 });
