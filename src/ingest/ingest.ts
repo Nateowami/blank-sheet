@@ -28,6 +28,7 @@ export async function runIngest(): Promise<void> {
 
   for await (const page of fetchEventsSince(projectId, since)) {
     totalFetched += page.length;
+    let insertedThisPage = 0;
     for (const rawEvent of page) {
       // Deduplication guard
       const exists = await events.findOne({ bugsnagId: rawEvent.id });
@@ -57,11 +58,35 @@ export async function runIngest(): Promise<void> {
       await events.insertOne(doc);
       newEventIds.push(doc._id);
       totalInserted++;
+      insertedThisPage++;
 
       if (receivedAt > latestReceivedAt) {
         latestReceivedAt = receivedAt;
       }
     }
+
+    // Persist progress after each page so a crash or rate-limit abort doesn't
+    // require re-fetching events we've already stored.
+    const now = new Date();
+    if (state) {
+      await stateCol.updateOne(
+        { projectId },
+        {
+          $set: { lastIngestedAt: latestReceivedAt, lastIngestRunAt: now },
+          $inc: { totalEventsIngested: insertedThisPage },
+        },
+      );
+    } else {
+      await stateCol.insertOne({
+        _id: new ObjectId(),
+        projectId,
+        lastIngestedAt: latestReceivedAt,
+        lastIngestRunAt: now,
+        totalEventsIngested: insertedThisPage,
+      });
+      state = await stateCol.findOne({ projectId });
+    }
+
     console.log(
       `[ingest] Fetched ${totalFetched} events, inserted ${totalInserted} so far…`,
     );
@@ -70,29 +95,6 @@ export async function runIngest(): Promise<void> {
   console.log(
     `[ingest] Done fetching. Inserted ${totalInserted} new events out of ${totalFetched} fetched.`,
   );
-
-  // Update ingestion state
-  const now = new Date();
-  if (state) {
-    await stateCol.updateOne(
-      { projectId },
-      {
-        $set: {
-          lastIngestedAt: latestReceivedAt,
-          lastIngestRunAt: now,
-          totalEventsIngested: (state.totalEventsIngested ?? 0) + totalInserted,
-        },
-      },
-    );
-  } else {
-    await stateCol.insertOne({
-      _id: new ObjectId(),
-      projectId,
-      lastIngestedAt: latestReceivedAt,
-      lastIngestRunAt: now,
-      totalEventsIngested: totalInserted,
-    });
-  }
 
   if (newEventIds.length === 0) {
     // No new events this run. Check if any previously ingested events were never

@@ -37,17 +37,25 @@ const BASE_URL = "https://api.bugsnag.com";
 
 async function apiFetch<T>(path: string): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `token ${env.bugsnagApiKey}`,
-      "Content-Type": "application/json",
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Bugsnag API ${res.status}: ${text}`);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `token ${env.bugsnagApiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (res.status === 429) {
+      console.warn("[bugsnag] Rate limited (429) — waiting 60 s before retrying…");
+      await new Promise((resolve) => setTimeout(resolve, 60_000));
+      continue;
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Bugsnag API ${res.status}: ${text}`);
+    }
+    return res.json() as Promise<T>;
   }
-  return res.json() as Promise<T>;
 }
 
 /**
