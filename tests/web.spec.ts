@@ -194,8 +194,8 @@ test("search - typing a term filters visible issues", async ({ page }) => {
   // Search for a specific term
   await page.locator("#search").fill("pagination");
 
-  // Should filter to fewer results
-  await page.waitForTimeout(100);
+  // Should filter to fewer results - wait for ABC-8 to appear (contains "pagination")
+  await expect(page.locator("tr[data-key='ABC-8']:not(.detail-row)")).toBeVisible();
   const rowsAfter = await page
     .locator(".issue-table tbody tr[data-key]:not(.detail-row)")
     .count();
@@ -250,7 +250,8 @@ test("mismatch filter - deactivating Priority hides priority-only issues", async
 
   // Deactivate Priority filter
   await page.locator(".mismatch-filter-btn[data-field='priority']").click();
-  await page.waitForTimeout(100);
+  // Wait for ABC-3 (priority-only mismatch) to be removed from the view
+  await expect(page.locator("tr[data-key='ABC-3']:not(.detail-row)")).not.toBeVisible();
 
   const filteredCount = await page
     .locator(".issue-table tbody tr[data-key]:not(.detail-row)")
@@ -353,7 +354,8 @@ test("stale icon - ABC-9 shows stale icon, ABC-1 does not", async ({ page }) => 
   await expect(page.locator(".issue-table")).toBeVisible();
   // Show dismissed to see ABC-9
   await page.locator("#value-dismissed-toggle").click();
-  await page.waitForTimeout(100);
+  // Wait for the table to update - ABC-9 (dismissed, stale) should appear
+  await expect(page.locator("tr[data-key='ABC-9']:not(.detail-row)")).toBeVisible();
 
   // ABC-9 is stale
   const abc9Row = page.locator("tr[data-key='ABC-9']:not(.detail-row)");

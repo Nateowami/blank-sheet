@@ -452,7 +452,7 @@ function renderIssueRow(issue, opts = {}) {
     : '—';
   const confidenceClass = a?.confidence === 'low' ? 'confidence-low' : '';
 
-  const dimissedCell = isDismissed
+  const dismissedCell = isDismissed
     ? `<span class="dismissed-badge">dismissed</span> <button class="restore-btn" data-key="${escHtml(issue.key)}">Restore</button>`
     : `<button class="dismiss-btn" data-key="${escHtml(issue.key)}">Dismiss</button>`;
 
@@ -466,7 +466,7 @@ function renderIssueRow(issue, opts = {}) {
       <td>${staleIcon}</td>
       <td>${mismatchIcon}</td>
       <td>${actionBadge}</td>
-      <td>${dimissedCell}</td>
+      <td>${dismissedCell}</td>
     </tr>
     <tr class="detail-row" data-key="${escHtml(issue.key)}" style="display:none">
       <td colspan="9">
@@ -664,7 +664,7 @@ function renderValue() {
     const staleIcon = a?.stalenessFlag ? `<span class="stale-icon" title="${escHtml(a.stalenessReason)}">🕐</span>` : '';
     const mismatchIcon = hasMismatch(issue) ? `<span class="mismatch-icon">⚠️</span>` : '';
     const isDismissed = issue.dismissed;
-    const dimissedCell = isDismissed
+    const dismissedCell = isDismissed
       ? `<span class="dismissed-badge">dismissed</span> <button class="restore-btn" data-key="${escHtml(issue.key)}">Restore</button>`
       : `<button class="dismiss-btn" data-key="${escHtml(issue.key)}">Dismiss</button>`;
 
@@ -678,7 +678,7 @@ function renderValue() {
         <td>${gemScore}</td>
         <td>${staleIcon}</td>
         <td>${mismatchIcon}</td>
-        <td>${dimissedCell}</td>
+        <td>${dismissedCell}</td>
       </tr>
       <tr class="detail-row" data-key="${escHtml(issue.key)}" style="display:none">
         <td colspan="9">${renderDetailPanel(issue)}</td>

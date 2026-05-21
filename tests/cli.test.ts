@@ -154,7 +154,7 @@ Deno.test("priority mismatch - score 7 with Blocker triggers mismatch", () => {
   assertEquals(result.priority, null, "No mismatch when both AI and Jira agree it's high");
 });
 
-Deno.test("priority mismatch - score 2 with Low priority triggers mismatch (low->low no match needed)", () => {
+Deno.test("priority mismatch - score 2 with Low priority does NOT trigger mismatch (low->low no mismatch)", () => {
   // score 2 with Low: AI says low, Jira says low → no mismatch (score ≤ 3 but Jira is not Critical/Blocker)
   const issue = makeIssue({ priority: "Low" });
   const analysis = makeAnalysis({ priorityScore: 2 });
