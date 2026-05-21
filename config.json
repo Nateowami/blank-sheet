@@ -1,0 +1,23 @@
+{
+  "bugsnag": {
+    "projectId": "your_project_id_here",
+    "pageSize": 100
+  },
+  "mongo": {
+    "database": "bugsnag_tool"
+  },
+  "llm": {
+    "baseUrl": "http://localhost:11434/v1",
+    "embeddingModel": "mxbai-embed-large",
+    "chatModel": "llama3"
+  },
+  "grouping": {
+    "embeddingSimilarityAutoMergeThreshold": 0.92,
+    "embeddingSimilarityLLMCandidateThreshold": 0.75,
+    "templateExtractionMinEvents": 5,
+    "trendTopNGroups": 10
+  },
+  "ui": {
+    "port": 3000
+  }
+}
