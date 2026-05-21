@@ -1,0 +1,31 @@
+{
+  "id": "10002",
+  "key": "ABC-2",
+  "fields": {
+    "summary": "Refactor database connection pooling to use pg-pool",
+    "description": "Our current database connection management creates a new connection for each request, leading to connection exhaustion under load. We should refactor to use a proper connection pool.\n\nThis is tracked as a tech-debt item following the production incident in Q4 2023.",
+    "issuetype": { "name": "Task" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["tech-debt", "database", "performance"],
+    "components": [{ "name": "Backend" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Carol White" },
+    "assignee": null,
+    "created": "2023-10-01T08:00:00.000Z",
+    "updated": "2023-10-05T12:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Carol White" },
+          "body": "After the Q4 incident, this is now urgent. We saw 300+ connection exhaustion errors.",
+          "created": "2023-10-05T12:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

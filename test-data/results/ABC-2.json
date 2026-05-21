@@ -1,0 +1,33 @@
+{
+  "key": "ABC-2",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Database connection pooling needs refactoring to prevent connection exhaustion under load",
+    "category": "tech-debt",
+    "tags": ["database", "performance", "scalability", "infrastructure"],
+    "priorityScore": 8,
+    "effort": "M",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "The connection exhaustion issue caused a production incident and remains a significant reliability risk. This should be addressed before the next high-traffic period.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 4.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": {
+        "jiraValue": "Minor",
+        "aiValue": "8/10",
+        "explanation": "This issue caused a production incident with 300+ connection errors. A Minor priority significantly underestimates the production reliability risk described in the comments."
+      },
+      "category": {
+        "jiraValue": "Task",
+        "aiValue": "tech-debt",
+        "explanation": "While labeled as a Task, the description explicitly calls this a tech-debt item and involves architectural refactoring of database connection management."
+      },
+      "labels": null,
+      "summary": null
+    }
+  }
+}

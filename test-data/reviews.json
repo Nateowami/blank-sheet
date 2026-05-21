@@ -1,0 +1,20 @@
+{
+  "ABC-5": {
+    "dismissed": true,
+    "dismissedAt": "2024-12-02T10:00:00.000Z",
+    "note": null,
+    "noteUpdatedAt": null
+  },
+  "ABC-9": {
+    "dismissed": true,
+    "dismissedAt": "2024-12-02T11:00:00.000Z",
+    "note": "Confirmed with the team - the v1 XML importer was fully removed in v2.0. This can be closed.",
+    "noteUpdatedAt": "2024-12-02T11:05:00.000Z"
+  },
+  "ABC-7": {
+    "dismissed": false,
+    "dismissedAt": null,
+    "note": "Low priority but the design team has a mockup ready. Pick up in Q2.",
+    "noteUpdatedAt": "2024-12-03T09:00:00.000Z"
+  }
+}

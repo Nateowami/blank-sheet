@@ -1,0 +1,29 @@
+{
+  "key": "ABC-12",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Public API endpoints have no rate limiting, leaving the service vulnerable to abuse and DoS",
+    "category": "bug",
+    "tags": ["security", "api", "rate-limiting", "dos"],
+    "priorityScore": 8,
+    "effort": "M",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "A security audit flagged this as high risk. Missing rate limiting on public endpoints is a serious vulnerability that could lead to service unavailability for all users.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 4.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": {
+        "jiraValue": "Minor",
+        "aiValue": "8/10",
+        "explanation": "A security audit explicitly flagged this as high risk. Missing rate limiting is a known DoS vector — Minor priority is significantly too low for a security vulnerability."
+      },
+      "category": null,
+      "labels": null,
+      "summary": null
+    }
+  }
+}

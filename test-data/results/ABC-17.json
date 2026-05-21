@@ -1,0 +1,29 @@
+{
+  "key": "ABC-17",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Fix N+1 query pattern in /api/reports endpoint to reduce response time from 10s to <1s",
+    "category": "tech-debt",
+    "tags": ["performance", "database", "api", "n+1-query"],
+    "priorityScore": 6,
+    "effort": "S",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "An 8-12 second API response time for reports is causing user complaints. The root cause (N+1 queries) is well-understood and the fix is targeted — high value for low effort.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 6.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": {
+        "jiraValue": "Task",
+        "aiValue": "tech-debt",
+        "explanation": "Resolving N+1 query patterns and adding database indexes is a tech-debt remediation, not a generic Task."
+      },
+      "labels": null,
+      "summary": null
+    }
+  }
+}

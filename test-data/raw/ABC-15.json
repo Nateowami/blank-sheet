@@ -1,0 +1,31 @@
+{
+  "id": "10015",
+  "key": "ABC-15",
+  "fields": {
+    "summary": "Add audit log for admin actions",
+    "description": "Administrators need a tamper-evident audit log of all privileged actions (user creation, permission changes, data deletion). Required for SOC 2 compliance.\n\nRequirements:\n- Log actor, action, target, timestamp, IP address\n- Read-only view in admin panel\n- Export to CSV",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["compliance", "admin", "security"],
+    "components": [{ "name": "Backend" }, { "name": "Admin" }],
+    "fixVersions": [{ "name": "v2.5" }],
+    "reporter": { "displayName": "Uma Scott" },
+    "assignee": null,
+    "created": "2024-04-15T08:00:00.000Z",
+    "updated": "2024-05-01T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Uma Scott" },
+          "body": "This is required for our SOC 2 Type II audit in Q1 next year.",
+          "created": "2024-05-01T10:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "10007",
+  "key": "ABC-7",
+  "fields": {
+    "summary": "Add dark mode support to the web UI",
+    "description": "Users have requested dark mode support. The app currently only supports a light theme. We should implement a system-preference-aware dark mode using CSS media queries and CSS custom properties.\n\nRequirements:\n- Respect system dark mode preference by default\n- Allow manual override via a toggle\n- Persist user preference in localStorage",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["ui", "accessibility", "dark-mode", "css", "theming", "frontend", "usability"],
+    "components": [{ "name": "UI" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Iris Cooper" },
+    "assignee": null,
+    "created": "2024-01-10T08:00:00.000Z",
+    "updated": "2024-01-12T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Jack Morris" },
+          "body": "+1, many users have requested this in support tickets.",
+          "created": "2024-01-12T10:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

@@ -1,0 +1,19 @@
+{
+  "jira": {
+    "baseUrl": "https://jira.sil.org",
+    "email": "user@example.com",
+    "project": "MYPROJECT"
+  },
+  "ai": {
+    "endpoint": "http://localhost:11434/v1",
+    "apiKey": "ollama",
+    "model": "llama3"
+  },
+  "data": {
+    "dir": "./data"
+  },
+  "server": {
+    "port": 7777
+  },
+  "promptFile": "./prompt.md"
+}

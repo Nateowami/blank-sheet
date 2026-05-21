@@ -1,0 +1,31 @@
+{
+  "id": "10019",
+  "key": "ABC-19",
+  "fields": {
+    "summary": "Email notification templates use hardcoded company name",
+    "description": "The email notification templates (welcome email, password reset, invoice emails) all have the company name hardcoded as 'Acme Corp' instead of reading it from the tenant configuration. White-label customers see incorrect branding.\n\nThis is causing significant confusion for B2B customers who have rebranded the product.",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["email", "branding", "white-label", "tenancy"],
+    "components": [{ "name": "Notifications" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Yara Thompson" },
+    "assignee": null,
+    "created": "2024-05-01T08:00:00.000Z",
+    "updated": "2024-05-10T11:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Yara Thompson" },
+          "body": "Two enterprise customers complained about this in the last week. One threatened to churn.",
+          "created": "2024-05-10T11:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "10017",
+  "key": "ABC-17",
+  "fields": {
+    "summary": "Reduce API response time for /api/reports endpoint",
+    "description": "The /api/reports endpoint takes 8-12 seconds to respond. Profiling shows the bottleneck is N+1 queries — each report row triggers a separate database query for metadata.\n\nFix: replace with a single JOIN query and add appropriate indexes.",
+    "issuetype": { "name": "Task" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["performance", "api", "database"],
+    "components": [{ "name": "Backend" }, { "name": "API" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Wendy Jackson" },
+    "assignee": null,
+    "created": "2024-09-15T08:00:00.000Z",
+    "updated": "2024-09-20T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Wendy Jackson" },
+          "body": "Users are complaining that the reports page takes forever to load.",
+          "created": "2024-09-20T10:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "10016",
+  "key": "ABC-16",
+  "fields": {
+    "summary": "CSV import skips rows with Unicode characters",
+    "description": "When importing a CSV file containing Unicode characters (e.g. accented letters, CJK characters, emoji), rows with those characters are silently skipped. The importer appears to be using ASCII-only parsing.\n\nAffects users in non-English locales significantly.",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["import", "internationalization", "unicode"],
+    "components": [{ "name": "Importer" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Victor Huang" },
+    "assignee": null,
+    "created": "2024-08-15T08:00:00.000Z",
+    "updated": "2024-08-20T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Victor Huang" },
+          "body": "Reproduced with a file containing Japanese characters. 40% of rows were skipped.",
+          "created": "2024-08-20T10:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

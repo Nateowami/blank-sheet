@@ -1,0 +1,36 @@
+{
+  "id": "10014",
+  "key": "ABC-14",
+  "fields": {
+    "summary": "User profile page crashes on mobile Safari",
+    "description": "The user profile page throws a JavaScript error on mobile Safari (iOS 15+) causing the entire page to go blank. Desktop browsers work fine. Error: 'Cannot read properties of undefined (reading map)'\n\nAffects approximately 15% of our user base who use mobile Safari.",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Critical" },
+    "labels": ["mobile", "safari", "frontend", "crash"],
+    "components": [{ "name": "UI" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Sarah Nelson" },
+    "assignee": { "displayName": "Thomas Wright" },
+    "created": "2024-10-01T08:00:00.000Z",
+    "updated": "2024-11-01T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Thomas Wright" },
+          "body": "Identified the issue: optional chaining not supported in older Safari. Fix in progress.",
+          "created": "2024-10-15T09:00:00.000Z"
+        },
+        {
+          "author": { "displayName": "Sarah Nelson" },
+          "body": "Any ETA? This is affecting enterprise customers on iPads.",
+          "created": "2024-11-01T10:00:00.000Z"
+        }
+      ],
+      "total": 2
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

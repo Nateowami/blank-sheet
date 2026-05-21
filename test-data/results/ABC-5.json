@@ -1,0 +1,25 @@
+{
+  "key": "ABC-5",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Customer asking how to configure SAML SSO attribute mapping with Okta identity provider",
+    "category": "question",
+    "tags": ["saml", "sso", "okta", "authentication"],
+    "priorityScore": 3,
+    "effort": "S",
+    "recommendedAction": "close",
+    "recommendedActionReason": "Support has already pointed the user to documentation. This appears to be a support question that has been addressed and can be closed.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 3.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "summary": null
+    }
+  }
+}

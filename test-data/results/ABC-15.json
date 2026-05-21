@@ -1,0 +1,25 @@
+{
+  "key": "ABC-15",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Tamper-evident admin action audit log required for SOC 2 Type II compliance",
+    "category": "feature",
+    "tags": ["compliance", "security", "audit", "admin"],
+    "priorityScore": 8,
+    "effort": "L",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "SOC 2 Type II compliance audit is scheduled for Q1. This feature is required to pass the audit. Failing to implement it could jeopardize enterprise customer contracts.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 2.67,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "summary": null
+    }
+  }
+}

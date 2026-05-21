@@ -1,0 +1,25 @@
+{
+  "key": "ABC-9",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Legacy v1 XML import crashes on large files, but the v1 format was deprecated in 2019",
+    "category": "bug",
+    "tags": ["legacy", "import", "xml"],
+    "priorityScore": 2,
+    "effort": "M",
+    "recommendedAction": "close",
+    "recommendedActionReason": "The reporter's own comment acknowledges the v1 XML format is deprecated and most customers have migrated. Fixing a bug in a deprecated tool is unlikely to be worth the investment.",
+    "stalenessFlag": true,
+    "stalenessReason": "No activity since April 2021 (3+ years). The issue references the v1 API format which was deprecated in 2019, suggesting this is for a system that no longer exists for most users.",
+    "buriedGemScore": 1.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "summary": null
+    }
+  }
+}

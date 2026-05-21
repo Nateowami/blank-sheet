@@ -1,0 +1,31 @@
+{
+  "id": "10003",
+  "key": "ABC-3",
+  "fields": {
+    "summary": "Add bulk export to CSV feature for reports",
+    "description": "Users need the ability to export report data in bulk to CSV. Currently, they can only export one record at a time, which is very slow for large datasets. This feature would allow selecting multiple records and downloading them in a single CSV file.\n\nRequested by 5+ enterprise customers.",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["export", "reports"],
+    "components": [{ "name": "UI" }, { "name": "Backend" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "David Lee" },
+    "assignee": null,
+    "created": "2024-02-01T08:00:00.000Z",
+    "updated": "2024-02-15T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Eve Martin" },
+          "body": "Confirmed request from 5 enterprise accounts. This is blocking their monthly reporting workflow.",
+          "created": "2024-02-15T10:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

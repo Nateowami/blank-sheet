@@ -1,0 +1,25 @@
+{
+  "key": "ABC-8",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Search results pagination is broken — navigating to page 2+ always shows page 1 data",
+    "category": "bug",
+    "tags": ["search", "pagination", "frontend", "api"],
+    "priorityScore": 7,
+    "effort": "S",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "Pagination is broken across all search queries on all browsers, affecting every user who searches and tries to navigate results. The root cause is already identified.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 7.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "summary": null
+    }
+  }
+}

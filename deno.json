@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "triage": "deno run --allow-net --allow-read --allow-write --allow-env src/cli.ts",
+    "test:unit": "deno test --allow-read --allow-write tests/cli.test.ts",
+    "test:e2e": "deno task triage serve --test-data & sleep 2 && npx playwright test",
+    "test": "deno task test:unit && deno task test:e2e"
+  }
+}

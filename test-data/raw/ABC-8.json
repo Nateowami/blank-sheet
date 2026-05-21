@@ -1,0 +1,41 @@
+{
+  "id": "10008",
+  "key": "ABC-8",
+  "fields": {
+    "summary": "Pagination broken on search results page",
+    "description": "When searching for items and navigating to page 2 or beyond, the URL updates but the results shown are still from page 1. The pagination controls display the correct page number but the data is wrong.\n\nAffects all search queries. Reproduced on Chrome, Firefox, and Safari.",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["search", "pagination", "frontend"],
+    "components": [{ "name": "UI" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Kate Brown" },
+    "assignee": { "displayName": "Liam Davis" },
+    "created": "2024-06-01T08:00:00.000Z",
+    "updated": "2024-06-15T14:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Liam Davis" },
+          "body": "Reproduced. The offset parameter is not being passed to the API call.",
+          "created": "2024-06-08T10:00:00.000Z"
+        },
+        {
+          "author": { "displayName": "Kate Brown" },
+          "body": "Is there any update on this fix? It's affecting our users daily.",
+          "created": "2024-06-15T14:00:00.000Z"
+        }
+      ],
+      "total": 2
+    },
+    "issuelinks": [
+      {
+        "type": { "name": "Blocks", "inward": "is blocked by", "outward": "blocks" },
+        "outwardIssue": { "key": "ABC-25", "fields": { "summary": "Improve search result ranking" } }
+      }
+    ],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}
