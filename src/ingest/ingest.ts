@@ -1,6 +1,7 @@
 import { config } from "../config.ts";
 import {
   eventsCollection,
+  groupsCollection,
   ingestionStateCollection,
   ObjectId,
   type EventDoc,
@@ -94,7 +95,29 @@ export async function runIngest(): Promise<void> {
   }
 
   if (newEventIds.length === 0) {
-    console.log("[ingest] No new events — skipping grouping pipeline.");
+    // No new events this run. Check if any previously ingested events were never
+    // processed by the grouping pipeline (e.g. because a prior run failed).
+    console.log("[ingest] No new events — checking for ungrouped events…");
+
+    const groupsCol = await groupsCollection();
+    const allGroups = await groupsCol.find({}, { projection: { eventIds: 1 } }).toArray();
+    const groupedIdSet = new Set<string>(
+      allGroups.flatMap((g) => g.eventIds.map((id) => id.toString())),
+    );
+
+    const allEvents = await events.find({}, { projection: { _id: 1 } }).toArray();
+    const ungroupedIds = allEvents
+      .filter((e) => !groupedIdSet.has(e._id.toString()))
+      .map((e) => e._id);
+
+    if (ungroupedIds.length === 0) {
+      console.log("[ingest] All events already grouped — nothing to do.");
+      return;
+    }
+
+    console.log(`[ingest] Found ${ungroupedIds.length} ungrouped events — running grouping pipeline…`);
+    await runGroupingPipeline(ungroupedIds);
+    console.log("[ingest] Grouping pipeline complete.");
     return;
   }
 

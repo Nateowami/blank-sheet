@@ -85,12 +85,14 @@ export async function* fetchEventsSince(
       yield newEvents;
     }
 
-    // If the last event in this page is older than since, stop paginating
+    // If the last event in this page is older than since, stop paginating.
+    // Do NOT stop just because we received fewer items than perPage — the API
+    // may impose its own per-page cap that is smaller than our requested size.
     const oldest = new Date(events[events.length - 1].received_at);
-    if (oldest <= since || events.length < perPage) {
+    if (oldest <= since) {
       hasMore = false;
     } else {
-      offset += perPage;
+      offset += events.length;
     }
   }
 }

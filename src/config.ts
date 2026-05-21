@@ -8,6 +8,7 @@ export interface Config {
   };
   llm: {
     baseUrl: string;
+    embeddingBaseUrl?: string;
     embeddingModel: string;
     chatModel: string;
   };

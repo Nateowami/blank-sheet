@@ -49,9 +49,10 @@ async function llmPost<T>(
   path: string,
   body: unknown,
   label: string,
+  baseUrl?: string,
 ): Promise<T> {
   return enqueue(label, async () => {
-    const url = `${config.llm.baseUrl}${path}`;
+    const url = `${baseUrl ?? config.llm.baseUrl}${path}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -76,6 +77,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
     "/embeddings",
     { model: config.llm.embeddingModel, input: text },
     `embed(${text.slice(0, 40)}…)`,
+    config.llm.embeddingBaseUrl,
   );
   return resp.data[0].embedding;
 }
