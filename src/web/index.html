@@ -270,6 +270,24 @@
 
   /* Tooltip */
   [title] { cursor: help; }
+
+  /* Sortable column headers */
+  .issue-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  .issue-table th.sortable:hover { background: #e8eaed; color: #0052cc; }
+  .sort-indicator { font-size: 11px; margin-left: 3px; color: #0052cc; }
+
+  /* Overall score (formerly gem score) */
+  .overall-score { font-weight: 700; color: #0052cc; }
+
+  /* Mismatch table in detail panel */
+  .mismatch-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+  .mismatch-table th { text-align: left; padding: 5px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #5e6c84; background: #f0f2f5; border-bottom: 1px solid #ddd; }
+  .mismatch-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .mismatch-table tr:last-child td { border-bottom: none; }
+  .mismatch-table td:first-child { font-weight: 600; white-space: nowrap; width: 90px; }
+  .mismatch-table .jira-val { color: #5e6c84; }
+  .mismatch-table .ai-val { color: #0052cc; }
+  .mismatch-table .explanation { color: #172b4d; font-style: italic; }
 </style>
 </head>
 <body>
@@ -311,10 +329,13 @@ let triageActionFilters = new Set(); // empty = all
 let triageStaleOnly = false;
 
 // Mismatch filters
-let mismatchFilters = new Set(['priority', 'category', 'labels', 'summary']); // active = show these
+let mismatchFilters = new Set(['priority', 'category', 'labels', 'components', 'summary']); // active = show these
 
 // Value view dismissed toggle
 let valueShowDismissed = false;
+
+// Sort state (reset on tab change)
+let sortState = { col: null, dir: 'asc' };
 
 // ──────────────────────────────────────────────
 // Init
@@ -369,6 +390,7 @@ function setupTabs() {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeTab = btn.dataset.tab;
+    sortState = { col: null, dir: 'asc' };
     render();
   });
 }
@@ -391,6 +413,7 @@ function matchesSearch(issue) {
     issue.analysis?.summary ?? '',
     (issue.analysis?.tags ?? []).join(' '),
     issue.analysis?.category ?? '',
+    (issue.jiraComponents ?? []).join(' '),
   ].join(' ').toLowerCase();
   return fields.includes(searchQuery);
 }
@@ -401,11 +424,15 @@ function matchesSearch(issue) {
 function hasMismatch(issue) {
   const m = issue.analysis?.mismatches;
   if (!m) return false;
-  return !!(m.priority || m.category || m.labels || m.summary);
+  return !!(m.priority || m.category || m.labels || m.components || m.summary);
 }
 
 function actionOrder(action) {
   return { prioritize: 0, 'needs-info': 1, close: 2, keep: 3 }[action] ?? 4;
+}
+
+function effortOrder(effort) {
+  return { S: 1, M: 2, L: 3, XL: 4 }[effort] ?? 0;
 }
 
 function scoreClass(score) {
@@ -416,6 +443,41 @@ function scoreClass(score) {
 
 function actionClass(action) {
   return { close: 'action-close', prioritize: 'action-prioritize', 'needs-info': 'action-needs-info', keep: 'action-keep' }[action] ?? 'action-keep';
+}
+
+// ──────────────────────────────────────────────
+// Sorting
+// ──────────────────────────────────────────────
+function getSortVal(issue, col) {
+  const a = issue.analysis;
+  switch (col) {
+    case 'key':     return issue.key;
+    case 'summary': return issue.jiraSummary.toLowerCase();
+    case 'category': return (a?.category ?? '').toLowerCase();
+    case 'impact':  return a?.priorityScore ?? 0;
+    case 'effort':  return effortOrder(a?.effort);
+    case 'action':  return actionOrder(a?.recommendedAction);
+    case 'overall': return a?.buriedGemScore ?? 0;
+    default:        return '';
+  }
+}
+
+function applySort(issues) {
+  if (!sortState.col) return issues;
+  const { col, dir } = sortState;
+  const m = dir === 'asc' ? 1 : -1;
+  return [...issues].sort((a, b) => {
+    const va = getSortVal(a, col);
+    const vb = getSortVal(b, col);
+    if (va < vb) return -m;
+    if (va > vb) return m;
+    return 0;
+  });
+}
+
+function sortIndicator(col) {
+  if (sortState.col !== col) return '';
+  return ` <span class="sort-indicator">${sortState.dir === 'asc' ? '↑' : '↓'}</span>`;
 }
 
 function escHtml(s) {
@@ -482,14 +544,37 @@ function renderDetailPanel(issue) {
 
   const tags = a.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
 
+  const components = (issue.jiraComponents ?? []);
+  const componentsHtml = components.length
+    ? components.map(c => `<span class="tag">${escHtml(c)}</span>`).join('')
+    : '<span style="color:#5e6c84; font-style:italic;">None set</span>';
+
   let mismatchHtml = '';
   const m = a.mismatches;
-  const mItems = [];
-  if (m.priority) mItems.push(`<li><span class="mismatch-field">Priority:</span> Jira=${escHtml(m.priority.jiraValue)}, AI=${escHtml(m.priority.aiValue)} — <em>${escHtml(m.priority.explanation)}</em></li>`);
-  if (m.category) mItems.push(`<li><span class="mismatch-field">Category:</span> Jira=${escHtml(m.category.jiraValue)}, AI=${escHtml(m.category.aiValue)} — <em>${escHtml(m.category.explanation)}</em></li>`);
-  if (m.labels) mItems.push(`<li><span class="mismatch-field">Labels:</span> Jira=${escHtml(m.labels.jiraValue)}, AI=${escHtml(m.labels.aiValue)} — <em>${escHtml(m.labels.explanation)}</em></li>`);
-  if (m.summary) mItems.push(`<li><span class="mismatch-field">Summary:</span> Jira=${escHtml(m.summary.jiraValue)}, AI=${escHtml(m.summary.aiValue)} — <em>${escHtml(m.summary.explanation)}</em></li>`);
-  if (mItems.length) mismatchHtml = `<div class="detail-section"><h4>Mismatches</h4><ul class="mismatch-list">${mItems.join('')}</ul></div>`;
+  const mRows = [];
+  function addMRow(label, detail) {
+    mRows.push(`<tr>
+      <td>${label}</td>
+      <td class="jira-val">${escHtml(detail.jiraValue)}</td>
+      <td class="ai-val">${escHtml(detail.aiValue)}</td>
+      <td class="explanation">${escHtml(detail.explanation)}</td>
+    </tr>`);
+  }
+  if (m.priority)    addMRow('Priority',    m.priority);
+  if (m.category)    addMRow('Category',    m.category);
+  if (m.labels)      addMRow('Labels',      m.labels);
+  if (m.components)  addMRow('Components',  m.components);
+  if (m.summary)     addMRow('Summary',     m.summary);
+  if (mRows.length) {
+    mismatchHtml = `
+      <div class="detail-section">
+        <h4>Mismatches</h4>
+        <table class="mismatch-table">
+          <thead><tr><th>Field</th><th>Jira</th><th>AI Suggestion</th><th>Explanation</th></tr></thead>
+          <tbody>${mRows.join('')}</tbody>
+        </table>
+      </div>`;
+  }
 
   const stalenessHtml = a.stalenessFlag
     ? `<div class="detail-section"><h4>Staleness</h4><p>${escHtml(a.stalenessReason)}</p></div>`
@@ -510,6 +595,10 @@ function renderDetailPanel(issue) {
         <div class="detail-tags">${tags}</div>
       </div>
       <div class="detail-section">
+        <h4>Jira Components</h4>
+        <div class="detail-tags">${componentsHtml}</div>
+      </div>
+      <div class="detail-section">
         <h4>Recommended Action</h4>
         <p><span class="action-badge ${actionClass(a.recommendedAction)}">${escHtml(a.recommendedAction)}</span>
         — ${escHtml(a.recommendedActionReason)}</p>
@@ -527,22 +616,23 @@ function renderDetailPanel(issue) {
 }
 
 function renderIssueTable(issues, opts = {}) {
-  if (!issues.length) {
+  const sorted = applySort(issues);
+  if (!sorted.length) {
     return '<div class="empty-state"><h3>No issues</h3><p>No issues match the current filters.</p></div>';
   }
-  const rows = issues.map(i => renderIssueRow(i, opts)).join('');
+  const rows = sorted.map(i => renderIssueRow(i, opts)).join('');
   return `
     <table class="issue-table">
       <thead>
         <tr>
-          <th>Key</th>
-          <th>Summary</th>
-          <th>Category</th>
-          <th>Score</th>
-          <th>Effort</th>
+          <th class="sortable" data-sort="key">Key${sortIndicator('key')}</th>
+          <th class="sortable" data-sort="summary">Summary${sortIndicator('summary')}</th>
+          <th class="sortable" data-sort="category">Category${sortIndicator('category')}</th>
+          <th class="sortable" data-sort="impact">Impact${sortIndicator('impact')}</th>
+          <th class="sortable" data-sort="effort">Effort${sortIndicator('effort')}</th>
           <th>Stale</th>
           <th>Mismatch</th>
-          <th>Action</th>
+          <th class="sortable" data-sort="action">Action${sortIndicator('action')}</th>
           <th></th>
         </tr>
       </thead>
@@ -577,13 +667,16 @@ function renderTriage() {
     issues = issues.filter(i => i.analysis?.stalenessFlag);
   }
   issues = issues.filter(matchesSearch);
-  issues.sort((a, b) => actionOrder(a.analysis?.recommendedAction) - actionOrder(b.analysis?.recommendedAction));
+  // Default sort by action; overridden by user column sort
+  if (!sortState.col) {
+    issues.sort((a, b) => actionOrder(a.analysis?.recommendedAction) - actionOrder(b.analysis?.recommendedAction));
+  }
 
   return filterHtml + renderIssueTable(issues);
 }
 
 function renderMismatches() {
-  const mFields = ['priority', 'category', 'labels', 'summary'];
+  const mFields = ['priority', 'category', 'labels', 'components', 'summary'];
   const filterHtml = `
     <div class="filter-bar">
       <label>Show mismatches in:</label>
@@ -597,10 +690,11 @@ function renderMismatches() {
   let issues = (allData?.issues ?? []).filter(i => {
     const m = i.analysis?.mismatches;
     if (!m) return false;
-    return (mismatchFilters.has('priority') && m.priority) ||
-           (mismatchFilters.has('category') && m.category) ||
-           (mismatchFilters.has('labels') && m.labels) ||
-           (mismatchFilters.has('summary') && m.summary);
+    return (mismatchFilters.has('priority')   && m.priority)   ||
+           (mismatchFilters.has('category')   && m.category)   ||
+           (mismatchFilters.has('labels')     && m.labels)     ||
+           (mismatchFilters.has('components') && m.components) ||
+           (mismatchFilters.has('summary')    && m.summary);
   });
   issues = issues.filter(matchesSearch);
 
@@ -652,15 +746,19 @@ function renderValue() {
   let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'ok');
   if (!valueShowDismissed) issues = issues.filter(i => !i.dismissed);
   issues = issues.filter(matchesSearch);
-  issues.sort((a, b) => (b.analysis?.buriedGemScore ?? 0) - (a.analysis?.buriedGemScore ?? 0));
+  // Default sort by overall score; overridden by user column sort
+  if (!sortState.col) {
+    issues.sort((a, b) => (b.analysis?.buriedGemScore ?? 0) - (a.analysis?.buriedGemScore ?? 0));
+  }
+  const sorted = applySort(issues);
 
-  if (!issues.length) {
+  if (!sorted.length) {
     return filterHtml + '<div class="empty-state"><h3>No issues</h3></div>';
   }
 
-  const rows = issues.map(issue => {
+  const rows = sorted.map(issue => {
     const a = issue.analysis;
-    const gemScore = a ? `<span class="gem-score">${a.buriedGemScore.toFixed(2)}</span>` : '—';
+    const overallScore = a ? `<span class="overall-score">${a.buriedGemScore.toFixed(2)}</span>` : '—';
     const staleIcon = a?.stalenessFlag ? `<span class="stale-icon" title="${escHtml(a.stalenessReason)}">🕐</span>` : '';
     const mismatchIcon = hasMismatch(issue) ? `<span class="mismatch-icon">⚠️</span>` : '';
     const isDismissed = issue.dismissed;
@@ -675,7 +773,7 @@ function renderValue() {
         <td>${escHtml(a?.category ?? '')}</td>
         <td><span class="score ${scoreClass(a?.priorityScore ?? 0)}">${a?.priorityScore ?? '—'}</span></td>
         <td><span class="effort-badge">${escHtml(a?.effort ?? '')}</span></td>
-        <td>${gemScore}</td>
+        <td>${overallScore}</td>
         <td>${staleIcon}</td>
         <td>${mismatchIcon}</td>
         <td>${dismissedCell}</td>
@@ -690,8 +788,13 @@ function renderValue() {
     <table class="issue-table">
       <thead>
         <tr>
-          <th>Key</th><th>Summary</th><th>Category</th><th>Score</th><th>Effort</th>
-          <th>Gem Score</th><th>Stale</th><th>Mismatch</th><th></th>
+          <th class="sortable" data-sort="key">Key${sortIndicator('key')}</th>
+          <th class="sortable" data-sort="summary">Summary${sortIndicator('summary')}</th>
+          <th class="sortable" data-sort="category">Category${sortIndicator('category')}</th>
+          <th class="sortable" data-sort="impact">Impact${sortIndicator('impact')}</th>
+          <th class="sortable" data-sort="effort">Effort${sortIndicator('effort')}</th>
+          <th class="sortable" data-sort="overall">Overall Score${sortIndicator('overall')}</th>
+          <th>Stale</th><th>Mismatch</th><th></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -791,6 +894,20 @@ function attachEventListeners() {
       if (!detailRow) return;
       const isOpen = detailRow.style.display !== 'none';
       detailRow.style.display = isOpen ? 'none' : '';
+    });
+  });
+
+  // Sortable column headers
+  document.querySelectorAll('.issue-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (sortState.col === col) {
+        sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState.col = col;
+        sortState.dir = 'asc';
+      }
+      render();
     });
   });
 
@@ -911,10 +1028,11 @@ function getMismatchIssues() {
   return (allData?.issues ?? []).filter(i => {
     const m = i.analysis?.mismatches;
     if (!m) return false;
-    return (mismatchFilters.has('priority') && m.priority) ||
-           (mismatchFilters.has('category') && m.category) ||
-           (mismatchFilters.has('labels') && m.labels) ||
-           (mismatchFilters.has('summary') && m.summary);
+    return (mismatchFilters.has('priority')   && m.priority)   ||
+           (mismatchFilters.has('category')   && m.category)   ||
+           (mismatchFilters.has('labels')     && m.labels)     ||
+           (mismatchFilters.has('components') && m.components) ||
+           (mismatchFilters.has('summary')    && m.summary);
   }).filter(matchesSearch);
 }
 function getValueIssues() {
@@ -945,8 +1063,8 @@ async function postReview(key, body) {
 // ──────────────────────────────────────────────
 function exportCsv(issues) {
   const headers = [
-    'Key', 'Summary', 'Category', 'Priority Score', 'Effort',
-    'Buried Gem Score', 'Recommended Action', 'Stale', 'Mismatch Fields', 'Note'
+    'Key', 'Summary', 'Category', 'Impact', 'Effort',
+    'Overall Score', 'Recommended Action', 'Stale', 'Mismatch Fields', 'Note'
   ];
   const rows = issues.map(i => {
     const a = i.analysis;

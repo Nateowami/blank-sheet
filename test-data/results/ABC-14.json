@@ -5,7 +5,13 @@
   "analysis": {
     "summary": "User profile page crashes on iOS mobile Safari due to missing optional chaining transpilation",
     "category": "bug",
-    "tags": ["mobile", "safari", "frontend", "crash", "compatibility"],
+    "tags": [
+      "mobile",
+      "safari",
+      "frontend",
+      "crash",
+      "compatibility"
+    ],
     "priorityScore": 8,
     "effort": "S",
     "recommendedAction": "prioritize",
@@ -19,6 +25,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

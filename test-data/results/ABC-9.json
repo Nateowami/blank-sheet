@@ -5,7 +5,11 @@
   "analysis": {
     "summary": "Legacy v1 XML import crashes on large files, but the v1 format was deprecated in 2019",
     "category": "bug",
-    "tags": ["legacy", "import", "xml"],
+    "tags": [
+      "legacy",
+      "import",
+      "xml"
+    ],
     "priorityScore": 2,
     "effort": "M",
     "recommendedAction": "close",
@@ -19,6 +23,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

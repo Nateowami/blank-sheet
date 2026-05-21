@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Upgrade Node.js runtime from EOL v14 to current LTS v20 for security patch coverage",
     "category": "tech-debt",
-    "tags": ["infrastructure", "dependencies", "security", "nodejs"],
+    "tags": [
+      "infrastructure",
+      "dependencies",
+      "security",
+      "nodejs"
+    ],
     "priorityScore": 7,
     "effort": "M",
     "recommendedAction": "prioritize",
@@ -23,6 +28,7 @@
         "explanation": "Upgrading a runtime dependency to address EOL and security patches is a tech-debt concern, not a general Task."
       },
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

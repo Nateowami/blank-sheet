@@ -77,6 +77,7 @@ export type IssueAnalysis = {
     priority: MismatchDetail | null;
     category: MismatchDetail | null;
     labels: MismatchDetail | null;
+    components: MismatchDetail | null;
     summary: MismatchDetail | null;
   };
 };
@@ -127,6 +128,7 @@ export type ApiIssue = {
   jiraType: string;
   jiraPriority: string;
   jiraLabels: string[];
+  jiraComponents: string[];
   jiraStatus: string;
   jiraAssignee: string | null;
   jiraCreated: string;

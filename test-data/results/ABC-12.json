@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Public API endpoints have no rate limiting, leaving the service vulnerable to abuse and DoS",
     "category": "bug",
-    "tags": ["security", "api", "rate-limiting", "dos"],
+    "tags": [
+      "security",
+      "api",
+      "rate-limiting",
+      "dos"
+    ],
     "priorityScore": 8,
     "effort": "M",
     "recommendedAction": "prioritize",
@@ -19,10 +24,11 @@
       "priority": {
         "jiraValue": "Minor",
         "aiValue": "8/10",
-        "explanation": "A security audit explicitly flagged this as high risk. Missing rate limiting is a known DoS vector — Minor priority is significantly too low for a security vulnerability."
+        "explanation": "A security audit explicitly flagged this as high risk. Missing rate limiting is a known DoS vector \u2014 Minor priority is significantly too low for a security vulnerability."
       },
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

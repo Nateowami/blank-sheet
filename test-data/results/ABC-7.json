@@ -5,11 +5,16 @@
   "analysis": {
     "summary": "Implement system-aware dark mode with manual override toggle and localStorage persistence",
     "category": "feature",
-    "tags": ["dark-mode", "ui", "accessibility", "theming"],
+    "tags": [
+      "dark-mode",
+      "ui",
+      "accessibility",
+      "theming"
+    ],
     "priorityScore": 4,
     "effort": "M",
     "recommendedAction": "keep",
-    "recommendedActionReason": "This is a commonly requested quality-of-life feature. It has value but no urgency — it can remain in the backlog for an appropriate sprint.",
+    "recommendedActionReason": "This is a commonly requested quality-of-life feature. It has value but no urgency \u2014 it can remain in the backlog for an appropriate sprint.",
     "stalenessFlag": false,
     "stalenessReason": null,
     "buriedGemScore": 2.0,
@@ -19,6 +24,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

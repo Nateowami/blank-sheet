@@ -3,9 +3,14 @@
   "status": "ok",
   "processedAt": "2024-12-01T01:00:00.000Z",
   "analysis": {
-    "summary": "Search results pagination is broken — navigating to page 2+ always shows page 1 data",
+    "summary": "Search results pagination is broken \u2014 navigating to page 2+ always shows page 1 data",
     "category": "bug",
-    "tags": ["search", "pagination", "frontend", "api"],
+    "tags": [
+      "search",
+      "pagination",
+      "frontend",
+      "api"
+    ],
     "priorityScore": 7,
     "effort": "S",
     "recommendedAction": "prioritize",
@@ -19,6 +24,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

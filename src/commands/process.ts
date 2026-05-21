@@ -121,6 +121,7 @@ export async function runProcess(
   let mismatchPriority = 0;
   let mismatchCategory = 0;
   let mismatchLabels = 0;
+  let mismatchComponents = 0;
   let staleCount = 0;
   let mismatchTotal = 0;
 
@@ -136,11 +137,13 @@ export async function runProcess(
       a.mismatches.priority ||
       a.mismatches.category ||
       a.mismatches.labels ||
+      a.mismatches.components ||
       a.mismatches.summary;
     if (hasMismatch) mismatchTotal++;
     if (a.mismatches.priority) mismatchPriority++;
     if (a.mismatches.category) mismatchCategory++;
     if (a.mismatches.labels) mismatchLabels++;
+    if (a.mismatches.components) mismatchComponents++;
   }
 
   // Update meta
@@ -180,6 +183,7 @@ export async function runProcess(
   console.log(`  Priority:     ${mismatchPriority.toString().padStart(3)}`);
   console.log(`  Category:     ${mismatchCategory.toString().padStart(3)}`);
   console.log(`  Labels:       ${mismatchLabels.toString().padStart(3)}`);
+  console.log(`  Components:   ${mismatchComponents.toString().padStart(3)}`);
   console.log("");
   console.log(`Stale/Inactive: ${staleCount} issues flagged`);
   console.log(line);

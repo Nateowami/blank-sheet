@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Tamper-evident admin action audit log required for SOC 2 Type II compliance",
     "category": "feature",
-    "tags": ["compliance", "security", "audit", "admin"],
+    "tags": [
+      "compliance",
+      "security",
+      "audit",
+      "admin"
+    ],
     "priorityScore": 8,
     "effort": "L",
     "recommendedAction": "prioritize",
@@ -19,6 +24,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

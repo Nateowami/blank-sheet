@@ -74,6 +74,7 @@ function makeAnalysis(overrides: Partial<IssueAnalysis>): IssueAnalysis {
       priority: null,
       category: null,
       labels: null,
+      components: null,
       summary: null,
     },
     ...overrides,

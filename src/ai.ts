@@ -83,6 +83,8 @@ function buildIssuePrompt(issue: JiraIssue): string {
 
   const labels = f.labels?.length ? f.labels.join(", ") : "(none)";
   lines.push(`Labels: ${labels}`);
+  const components = f.components?.length ? f.components.map((c) => c.name).join(", ") : "(none)";
+  lines.push(`Components: ${components}`);
   lines.push(`Summary: ${f.summary}`);
   lines.push("");
   lines.push("Description:");
@@ -165,6 +167,7 @@ function parseAnalysis(content: string): IssueAnalysis {
       priority: raw.mismatches?.priority ?? null,
       category: raw.mismatches?.category ?? null,
       labels: raw.mismatches?.labels ?? null,
+      components: raw.mismatches?.components ?? null,
       summary: raw.mismatches?.summary ?? null,
     },
   };
@@ -242,22 +245,39 @@ export function detectMismatches(
     }
   }
 
-  // Labels mismatch - check if AI tags contain topics absent from Jira labels/components
+  // Labels mismatch - check if AI tags contain topics absent from Jira labels
   let labelsMismatch: MismatchDetail | null = null;
   const jiraLabels = (f.labels ?? []).map((l) => l.toLowerCase());
-  const jiraComponents = (f.components ?? []).map((c) => c.name.toLowerCase());
-  const allJiraTopics = [...jiraLabels, ...jiraComponents];
-  const missingTags = analysis.tags.filter(
+  const missingFromLabels = analysis.tags.filter(
     (tag) =>
-      !allJiraTopics.some(
-        (t) => t.includes(tag.toLowerCase()) || tag.toLowerCase().includes(t),
+      !jiraLabels.some(
+        (l) => l.includes(tag.toLowerCase()) || tag.toLowerCase().includes(l),
       ),
   );
-  if (missingTags.length >= 2 && allJiraTopics.length > 0) {
+  if (missingFromLabels.length >= 2 && jiraLabels.length > 0) {
     labelsMismatch = {
-      jiraValue: allJiraTopics.join(", ") || "(none)",
+      jiraValue: jiraLabels.join(", ") || "(none)",
       aiValue: analysis.tags.join(", "),
-      explanation: `AI identified topics [${missingTags.join(", ")}] not present in Jira labels or components.`,
+      explanation:
+        `AI identified topics [${missingFromLabels.join(", ")}] not present in Jira labels.`,
+    };
+  }
+
+  // Components mismatch - check if AI tags contain topics absent from Jira components
+  let componentsMismatch: MismatchDetail | null = null;
+  const jiraComponents = (f.components ?? []).map((c) => c.name.toLowerCase());
+  const missingFromComponents = analysis.tags.filter(
+    (tag) =>
+      !jiraComponents.some(
+        (c) => c.includes(tag.toLowerCase()) || tag.toLowerCase().includes(c),
+      ),
+  );
+  if (missingFromComponents.length >= 2 && jiraComponents.length > 0) {
+    componentsMismatch = {
+      jiraValue: jiraComponents.join(", "),
+      aiValue: analysis.tags.join(", "),
+      explanation:
+        `AI identified topics [${missingFromComponents.slice(0, 3).join(", ")}] not reflected in Jira components.`,
     };
   }
 
@@ -316,6 +336,7 @@ export function detectMismatches(
     priority: analysis.mismatches?.priority ?? priorityMismatch,
     category: analysis.mismatches?.category ?? categoryMismatch,
     labels: analysis.mismatches?.labels ?? labelsMismatch,
+    components: analysis.mismatches?.components ?? componentsMismatch,
     summary: analysis.mismatches?.summary ?? summaryMismatch,
   };
 }

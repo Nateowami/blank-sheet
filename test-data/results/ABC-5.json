@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Customer asking how to configure SAML SSO attribute mapping with Okta identity provider",
     "category": "question",
-    "tags": ["saml", "sso", "okta", "authentication"],
+    "tags": [
+      "saml",
+      "sso",
+      "okta",
+      "authentication"
+    ],
     "priorityScore": 3,
     "effort": "S",
     "recommendedAction": "close",
@@ -19,6 +24,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

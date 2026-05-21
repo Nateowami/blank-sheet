@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Login fails with 500 error when password contains special characters due to missing input sanitization",
     "category": "bug",
-    "tags": ["auth", "backend", "security", "input-validation"],
+    "tags": [
+      "auth",
+      "backend",
+      "security",
+      "input-validation"
+    ],
     "priorityScore": 8,
     "effort": "S",
     "recommendedAction": "prioritize",
@@ -19,6 +24,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

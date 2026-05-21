@@ -49,6 +49,7 @@ async function loadData(dataDir: string, baseUrl: string): Promise<ApiData> {
       jiraType: f.issuetype?.name ?? "Unknown",
       jiraPriority: f.priority?.name ?? "None",
       jiraLabels: f.labels ?? [],
+      jiraComponents: (f.components ?? []).map((c) => c.name),
       jiraStatus: f.status?.name ?? "Unknown",
       jiraAssignee: f.assignee?.displayName ?? null,
       jiraCreated: f.created,

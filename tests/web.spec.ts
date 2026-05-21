@@ -287,7 +287,7 @@ test("value view - issues sorted by buriedGemScore descending", async ({ page })
   const firstKey = await firstRow.getAttribute("data-key");
 
   // Check its gem score is visible and among the highest
-  const gemScores = await page.locator(".gem-score").allTextContents();
+  const gemScores = await page.locator(".overall-score").allTextContents();
   if (gemScores.length > 0) {
     const first = parseFloat(gemScores[0]);
     const last = parseFloat(gemScores[gemScores.length - 1]);

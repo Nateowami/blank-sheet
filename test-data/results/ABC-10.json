@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Real-time collaborative document editing using WebSockets and CRDT/OT algorithm",
     "category": "feature",
-    "tags": ["collaboration", "websocket", "realtime", "architecture"],
+    "tags": [
+      "collaboration",
+      "websocket",
+      "realtime",
+      "architecture"
+    ],
     "priorityScore": 7,
     "effort": "XL",
     "recommendedAction": "needs-info",
@@ -19,6 +24,7 @@
       "priority": null,
       "category": null,
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

@@ -5,7 +5,12 @@
   "analysis": {
     "summary": "Database connection pooling needs refactoring to prevent connection exhaustion under load",
     "category": "tech-debt",
-    "tags": ["database", "performance", "scalability", "infrastructure"],
+    "tags": [
+      "database",
+      "performance",
+      "scalability",
+      "infrastructure"
+    ],
     "priorityScore": 8,
     "effort": "M",
     "recommendedAction": "prioritize",
@@ -27,6 +32,7 @@
         "explanation": "While labeled as a Task, the description explicitly calls this a tech-debt item and involves architectural refactoring of database connection management."
       },
       "labels": null,
+      "components": null,
       "summary": null
     }
   }

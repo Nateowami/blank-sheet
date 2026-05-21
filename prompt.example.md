@@ -27,6 +27,7 @@ Your response must match this exact schema:
     "priority": MismatchDetail | null,
     "category": MismatchDetail | null,
     "labels": MismatchDetail | null,
+    "components": MismatchDetail | null,
     "summary": MismatchDetail | null
   }
 }
@@ -84,7 +85,8 @@ Set to `true` if ANY of the following apply:
 Report a mismatch when:
 - **priority**: Your `priorityScore` ≥ 7 and Jira priority is Minor/Low, OR your score ≤ 3 and Jira is Critical/Blocker
 - **category**: Your `category` clearly differs from the Jira issue type (e.g., AI=bug, Jira=Task)
-- **labels**: Your `tags` contain significant topics absent from Jira labels and components
+- **labels**: Your `tags` contain significant topics absent from Jira labels
+- **components**: Your `tags` suggest app areas not reflected in the Jira components field (e.g., you identify "authentication" and "mobile" as key topics, but Jira components only list "Backend")
 - **summary**: Your `summary` describes something substantially different from the Jira summary
 
 Always set unused mismatch fields to `null`, never omit them.
