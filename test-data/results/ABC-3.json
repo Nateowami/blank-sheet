@@ -1,0 +1,35 @@
+{
+  "key": "ABC-3",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Bulk CSV export for reports would unblock multiple enterprise customers' monthly reporting workflows",
+    "category": "feature",
+    "tags": [
+      "export",
+      "reports",
+      "enterprise",
+      "csv"
+    ],
+    "priorityScore": 7,
+    "effort": "M",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "This feature is requested by 5+ enterprise customers and is blocking their monthly reporting workflows. The business impact justifies elevating this above its current Minor priority.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 3.5,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": {
+        "jiraValue": "Minor",
+        "aiValue": "7/10",
+        "explanation": "The comment confirms 5 enterprise accounts are blocked. Minor priority undervalues the customer impact described \u2014 this is blocking enterprise workflows."
+      },
+      "category": null,
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

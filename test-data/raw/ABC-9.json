@@ -1,0 +1,31 @@
+{
+  "id": "10009",
+  "key": "ABC-9",
+  "fields": {
+    "summary": "Old XML import tool fails with large files",
+    "description": "The legacy XML batch import tool crashes when processing files larger than 50MB. The tool was written to support the old v1 API format which was deprecated in 2019. Most users have migrated to the REST API import.\n\nOriginally reported for the v1 legacy import which is being phased out.",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["legacy", "import"],
+    "components": [{ "name": "Importer" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Mark Taylor" },
+    "assignee": null,
+    "created": "2021-03-15T08:00:00.000Z",
+    "updated": "2021-04-01T09:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Mark Taylor" },
+          "body": "The v1 XML format is basically deprecated now. Most customers use the REST API. This may not be worth fixing.",
+          "created": "2021-04-01T09:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

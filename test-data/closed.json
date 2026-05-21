@@ -1,0 +1,75 @@
+{
+  "fetchedAt": "2024-12-01T00:00:00.000Z",
+  "issues": [
+    {
+      "key": "ABC-50",
+      "summary": "Fix broken redirect after OAuth login",
+      "resolution": "Fixed",
+      "status": "Done",
+      "resolutionDate": "2024-01-20T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-51",
+      "summary": "Update privacy policy page",
+      "resolution": "Fixed",
+      "status": "Done",
+      "resolutionDate": "2024-02-05T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-52",
+      "summary": "User can't delete their own account",
+      "resolution": "Won't Fix",
+      "status": "Done",
+      "resolutionDate": "2023-11-10T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-53",
+      "summary": "Add Google Analytics integration",
+      "resolution": "Won't Fix",
+      "status": "Done",
+      "resolutionDate": "2023-08-15T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-54",
+      "summary": "Login page typo in error message",
+      "resolution": "Fixed",
+      "status": "Done",
+      "resolutionDate": "2024-03-01T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-55",
+      "summary": "Duplicate: API timeout on slow connections",
+      "resolution": "Duplicate",
+      "status": "Done",
+      "resolutionDate": "2024-04-10T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-56",
+      "summary": "Add password strength meter to registration",
+      "resolution": "Fixed",
+      "status": "Done",
+      "resolutionDate": "2024-05-20T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-57",
+      "summary": "Fix table overflow on small screens",
+      "resolution": "Fixed",
+      "status": "Done",
+      "resolutionDate": "2024-06-01T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-58",
+      "summary": "Remove deprecated v1 XML importer endpoint",
+      "resolution": "Fixed",
+      "status": "Done",
+      "resolutionDate": "2024-07-15T00:00:00.000Z"
+    },
+    {
+      "key": "ABC-59",
+      "summary": "Investigate slow startup time in Docker",
+      "resolution": "Won't Fix",
+      "status": "Done",
+      "resolutionDate": "2024-08-01T00:00:00.000Z"
+    }
+  ]
+}

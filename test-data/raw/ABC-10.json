@@ -1,0 +1,46 @@
+{
+  "id": "10010",
+  "key": "ABC-10",
+  "fields": {
+    "summary": "Implement real-time collaboration using WebSockets",
+    "description": "Add real-time collaborative editing capabilities to documents. Multiple users should be able to edit the same document simultaneously with changes synced in real time.\n\nThis is a major feature that requires:\n- WebSocket infrastructure\n- Operational Transform or CRDT algorithm\n- Presence indicators\n- Conflict resolution\n- Offline support",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["collaboration", "websocket", "realtime"],
+    "components": [{ "name": "Backend" }, { "name": "UI" }],
+    "fixVersions": [{ "name": "v3.0" }],
+    "reporter": { "displayName": "Nancy Adams" },
+    "assignee": null,
+    "created": "2024-07-01T08:00:00.000Z",
+    "updated": "2024-07-20T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Nancy Adams" },
+          "body": "This is our most requested enterprise feature. We need to scope it properly.",
+          "created": "2024-07-10T08:00:00.000Z"
+        },
+        {
+          "author": { "displayName": "Oscar Fisher" },
+          "body": "Recommend starting with Yjs for the CRDT layer.",
+          "created": "2024-07-15T09:00:00.000Z"
+        },
+        {
+          "author": { "displayName": "Nancy Adams" },
+          "body": "Agreed. Let's also consider Phoenix Channels for the websocket infra.",
+          "created": "2024-07-20T10:00:00.000Z"
+        }
+      ],
+      "total": 3
+    },
+    "issuelinks": [
+      {
+        "type": { "name": "Relates", "inward": "relates to", "outward": "relates to" },
+        "outwardIssue": { "key": "ABC-6", "fields": { "summary": "Memory leak in websocket handler" } }
+      }
+    ],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

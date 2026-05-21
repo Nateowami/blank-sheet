@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jira Triage</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f6f7;
+    color: #172b4d;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Header */
+  .header {
+    background: #0052cc;
+    color: white;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2);
+  }
+  .header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .header .search-wrap { flex: 1; max-width: 400px; }
+  .header input[type="search"] {
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    outline: none;
+  }
+  .header input[type="search"]::placeholder { color: rgba(255,255,255,0.6); }
+  .header input[type="search"]:focus { background: rgba(255,255,255,0.25); }
+  .header .issue-count { font-size: 13px; opacity: 0.85; white-space: nowrap; }
+
+  /* Tabs */
+  .tabs {
+    background: white;
+    border-bottom: 2px solid #e0e0e0;
+    padding: 0 20px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #5e6c84;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+  }
+  .tab-btn:hover { color: #0052cc; }
+  .tab-btn.active { color: #0052cc; border-bottom-color: #0052cc; font-weight: 600; }
+  .tab-btn .badge {
+    display: inline-block;
+    background: #e0e0e0;
+    color: #5e6c84;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+  }
+  .tab-btn.active .badge { background: #0052cc22; color: #0052cc; }
+
+  /* Content */
+  .content { padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 13px; color: #5e6c84; }
+  .filter-btn {
+    padding: 4px 12px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    color: #5e6c84;
+    transition: all .15s;
+  }
+  .filter-btn.active {
+    background: #0052cc;
+    border-color: #0052cc;
+    color: white;
+  }
+  .filter-btn:hover:not(.active) { border-color: #0052cc; color: #0052cc; }
+
+  .export-btn {
+    margin-left: auto;
+    padding: 5px 14px;
+    border: 1px solid #0052cc;
+    border-radius: 4px;
+    background: white;
+    color: #0052cc;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .export-btn:hover { background: #e6f0ff; }
+
+  /* Issue table */
+  .issue-table { width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .issue-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5e6c84;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    background: #f4f5f7;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .issue-table td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .issue-table tr:last-child td { border-bottom: none; }
+  .issue-table tr.dismissed { opacity: 0.45; }
+  .issue-table tbody tr:hover { background: #f8f9ff; }
+
+  /* Key link */
+  .key-link { color: #0052cc; text-decoration: none; font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .key-link:hover { text-decoration: underline; }
+
+  /* Action badges */
+  .action-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .action-close { background: #ffebe6; color: #bf2600; }
+  .action-prioritize { background: #e3fcef; color: #006644; }
+  .action-needs-info { background: #fff7d6; color: #974900; }
+  .action-keep { background: #f4f5f7; color: #5e6c84; }
+
+  /* Priority score */
+  .score { font-weight: 700; }
+  .score-high { color: #bf2600; }
+  .score-med { color: #974900; }
+  .score-low { color: #5e6c84; }
+
+  /* Effort badge */
+  .effort-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5e6c84;
+  }
+
+  /* Icons */
+  .stale-icon { cursor: default; font-size: 15px; }
+  .mismatch-icon { cursor: default; font-size: 14px; }
+  .confidence-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ddd; margin-right: 4px; }
+  .confidence-low .confidence-dot { background: #c9c9c9; }
+
+  /* Dismiss / restore buttons */
+  .dismiss-btn, .restore-btn {
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .dismiss-btn { border-color: #ccc; background: white; color: #5e6c84; }
+  .dismiss-btn:hover { background: #ffebe6; border-color: #bf2600; color: #bf2600; }
+  .restore-btn { border-color: #ccc; background: white; color: #0052cc; }
+  .restore-btn:hover { background: #e6f0ff; }
+
+  .dismissed-badge {
+    font-size: 11px;
+    color: #5e6c84;
+    font-style: italic;
+    padding: 2px 6px;
+    background: #f4f5f7;
+    border-radius: 3px;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    background: #f8f9ff;
+    border-top: 1px solid #e0e0e0;
+    padding: 16px 20px;
+  }
+  .detail-panel h4 { font-size: 13px; color: #5e6c84; font-weight: 600; margin-bottom: 6px; }
+  .detail-section { margin-bottom: 12px; }
+  .detail-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #e6f0ff;
+    color: #0052cc;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+  .mismatch-list { list-style: none; }
+  .mismatch-list li { font-size: 13px; margin-bottom: 4px; }
+  .mismatch-field { font-weight: 600; }
+  .note-area {
+    width: 100%;
+    min-height: 64px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    background: white;
+  }
+  .note-area:focus { outline: none; border-color: #0052cc; }
+  .note-saved { font-size: 12px; color: #00875a; margin-top: 4px; display: none; }
+
+  /* Category group */
+  .category-group { background: white; border-radius: 6px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); overflow: hidden; }
+  .category-header {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+  }
+  .category-header:hover { background: #f8f9ff; }
+  .category-header h3 { font-size: 15px; font-weight: 600; flex: 1; }
+  .category-count { font-size: 13px; color: #5e6c84; }
+  .category-chevron { font-size: 12px; color: #5e6c84; transition: transform .2s; }
+  .category-group.open .category-chevron { transform: rotate(90deg); }
+  .category-body { display: none; }
+  .category-group.open .category-body { display: block; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 60px 20px; color: #5e6c84; }
+  .empty-state h3 { font-size: 18px; margin-bottom: 8px; }
+  .empty-state p { font-size: 14px; }
+
+  /* Error display */
+  .error-msg { font-family: monospace; font-size: 12px; color: #bf2600; max-width: 400px; word-break: break-all; }
+
+  /* Buried gem score */
+  .gem-score { font-weight: 700; color: #0052cc; }
+
+  /* Pending indicator */
+  .pending-label { font-size: 12px; color: #5e6c84; font-style: italic; }
+
+  /* Tooltip */
+  [title] { cursor: help; }
+
+  /* Sortable column headers */
+  .issue-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  .issue-table th.sortable:hover { background: #e8eaed; color: #0052cc; }
+  .sort-indicator { font-size: 11px; margin-left: 3px; color: #0052cc; }
+
+  /* Overall score (formerly gem score) */
+  .overall-score { font-weight: 700; color: #0052cc; }
+
+  /* Mismatch table in detail panel */
+  .mismatch-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+  .mismatch-table th { text-align: left; padding: 5px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #5e6c84; background: #f0f2f5; border-bottom: 1px solid #ddd; }
+  .mismatch-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .mismatch-table tr:last-child td { border-bottom: none; }
+  .mismatch-table td:first-child { font-weight: 600; white-space: nowrap; width: 90px; }
+  .mismatch-table .jira-val { color: #5e6c84; }
+  .mismatch-table .ai-val { color: #0052cc; }
+  .mismatch-table .explanation { color: #172b4d; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Jira Triage</h1>
+  <div class="search-wrap">
+    <input type="search" id="search" placeholder="Search issues…" autocomplete="off" />
+  </div>
+  <span class="issue-count" id="issue-count">Loading…</span>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="triage">Triage Queue <span class="badge" id="badge-triage">0</span></button>
+  <button class="tab-btn" data-tab="mismatches">Mismatches <span class="badge" id="badge-mismatches">0</span></button>
+  <button class="tab-btn" data-tab="category">By Category</button>
+  <button class="tab-btn" data-tab="value">Value <span class="badge" id="badge-value">0</span></button>
+  <button class="tab-btn" data-tab="errors">Errors <span class="badge" id="badge-errors">0</span></button>
+  <button class="tab-btn" data-tab="pending">Pending <span class="badge" id="badge-pending">0</span></button>
+</div>
+
+<div class="content" id="content">
+  <div class="empty-state"><h3>Loading…</h3></div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+// ──────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────
+let allData = null;     // ApiData from /api/data
+let activeTab = 'triage';
+let searchQuery = '';
+
+// Triage queue filters
+let triageActionFilters = new Set(); // empty = all
+let triageStaleOnly = false;
+
+// Mismatch filters
+let mismatchFilters = new Set(['priority', 'category', 'labels', 'components', 'summary']); // active = show these
+
+// Value view dismissed toggle
+let valueShowDismissed = false;
+
+// Sort state (reset on tab change)
+let sortState = { col: null, dir: 'asc' };
+
+// ──────────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────────
+async function init() {
+  await loadData();
+  setupTabs();
+  setupSearch();
+  render();
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/data');
+    allData = await res.json();
+    updateBadges();
+    document.getElementById('issue-count').textContent =
+      `${allData.issues.length} issues`;
+  } catch (e) {
+    document.getElementById('content').innerHTML =
+      `<div class="empty-state"><h3>Failed to load data</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function updateBadges() {
+  if (!allData) return;
+  const issues = allData.issues;
+
+  const triageIssues = issues.filter(i => i.resultStatus === 'ok' && !i.dismissed);
+  document.getElementById('badge-triage').textContent = triageIssues.length;
+
+  const mismatchIssues = issues.filter(i => hasMismatch(i));
+  document.getElementById('badge-mismatches').textContent = mismatchIssues.length;
+
+  const valueIssues = issues.filter(i => i.resultStatus === 'ok' && !i.dismissed);
+  document.getElementById('badge-value').textContent = valueIssues.length;
+
+  document.getElementById('badge-errors').textContent =
+    issues.filter(i => i.resultStatus === 'error').length;
+
+  document.getElementById('badge-pending').textContent =
+    issues.filter(i => i.resultStatus === 'pending').length;
+}
+
+// ──────────────────────────────────────────────
+// Tabs
+// ──────────────────────────────────────────────
+function setupTabs() {
+  document.getElementById('tabs').addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTab = btn.dataset.tab;
+    sortState = { col: null, dir: 'asc' };
+    render();
+  });
+}
+
+// ──────────────────────────────────────────────
+// Search
+// ──────────────────────────────────────────────
+function setupSearch() {
+  document.getElementById('search').addEventListener('input', e => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    render();
+  });
+}
+
+function matchesSearch(issue) {
+  if (!searchQuery) return true;
+  const fields = [
+    issue.key,
+    issue.jiraSummary,
+    issue.analysis?.summary ?? '',
+    (issue.analysis?.tags ?? []).join(' '),
+    issue.analysis?.category ?? '',
+    (issue.jiraComponents ?? []).join(' '),
+  ].join(' ').toLowerCase();
+  return fields.includes(searchQuery);
+}
+
+// ──────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────
+function hasMismatch(issue) {
+  const m = issue.analysis?.mismatches;
+  if (!m) return false;
+  return !!(m.priority || m.category || m.labels || m.components || m.summary);
+}
+
+function actionOrder(action) {
+  return { prioritize: 0, 'needs-info': 1, close: 2, keep: 3 }[action] ?? 4;
+}
+
+function effortOrder(effort) {
+  return { S: 1, M: 2, L: 3, XL: 4 }[effort] ?? 0;
+}
+
+function scoreClass(score) {
+  if (score >= 7) return 'score-high';
+  if (score >= 4) return 'score-med';
+  return 'score-low';
+}
+
+function actionClass(action) {
+  return { close: 'action-close', prioritize: 'action-prioritize', 'needs-info': 'action-needs-info', keep: 'action-keep' }[action] ?? 'action-keep';
+}
+
+// ──────────────────────────────────────────────
+// Sorting
+// ──────────────────────────────────────────────
+function getSortVal(issue, col) {
+  const a = issue.analysis;
+  switch (col) {
+    case 'key':     return issue.key;
+    case 'summary': return issue.jiraSummary.toLowerCase();
+    case 'category': return (a?.category ?? '').toLowerCase();
+    case 'impact':  return a?.priorityScore ?? 0;
+    case 'effort':  return effortOrder(a?.effort);
+    case 'action':  return actionOrder(a?.recommendedAction);
+    case 'overall': return a?.buriedGemScore ?? 0;
+    default:        return '';
+  }
+}
+
+function applySort(issues) {
+  if (!sortState.col) return issues;
+  const { col, dir } = sortState;
+  const m = dir === 'asc' ? 1 : -1;
+  return [...issues].sort((a, b) => {
+    const va = getSortVal(a, col);
+    const vb = getSortVal(b, col);
+    if (va < vb) return -m;
+    if (va > vb) return m;
+    return 0;
+  });
+}
+
+function sortIndicator(col) {
+  if (sortState.col !== col) return '';
+  return ` <span class="sort-indicator">${sortState.dir === 'asc' ? '↑' : '↓'}</span>`;
+}
+
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ──────────────────────────────────────────────
+// Issue row rendering
+// ──────────────────────────────────────────────
+function renderIssueRow(issue, opts = {}) {
+  const { showDismissed = false } = opts;
+  const a = issue.analysis;
+  const isDismissed = issue.dismissed;
+
+  const staleIcon = (a?.stalenessFlag)
+    ? `<span class="stale-icon" title="${escHtml(a.stalenessReason)}">🕐</span>`
+    : '';
+  const mismatchIcon = hasMismatch(issue)
+    ? `<span class="mismatch-icon" title="Mismatches detected">⚠️</span>`
+    : '';
+  const actionBadge = a
+    ? `<span class="action-badge ${actionClass(a.recommendedAction)}">${escHtml(a.recommendedAction)}</span>`
+    : '';
+  const scoreHtml = a
+    ? `<span class="score ${scoreClass(a.priorityScore)}">${a.priorityScore}</span>`
+    : '—';
+  const effortHtml = a
+    ? `<span class="effort-badge">${escHtml(a.effort)}</span>`
+    : '—';
+  const confidenceClass = a?.confidence === 'low' ? 'confidence-low' : '';
+
+  const dismissedCell = isDismissed
+    ? `<span class="dismissed-badge">dismissed</span> <button class="restore-btn" data-key="${escHtml(issue.key)}">Restore</button>`
+    : `<button class="dismiss-btn" data-key="${escHtml(issue.key)}">Dismiss</button>`;
+
+  return `
+    <tr class="${isDismissed ? 'dismissed' : ''} ${confidenceClass}" data-key="${escHtml(issue.key)}">
+      <td><a class="key-link" href="${escHtml(issue.jiraLink)}" target="_blank" rel="noopener">${escHtml(issue.key)}</a></td>
+      <td>${escHtml(issue.jiraSummary)}</td>
+      <td>${escHtml(a?.category ?? issue.jiraType)}</td>
+      <td>${scoreHtml}</td>
+      <td>${effortHtml}</td>
+      <td>${staleIcon}</td>
+      <td>${mismatchIcon}</td>
+      <td>${actionBadge}</td>
+      <td>${dismissedCell}</td>
+    </tr>
+    <tr class="detail-row" data-key="${escHtml(issue.key)}" style="display:none">
+      <td colspan="9">
+        ${renderDetailPanel(issue)}
+      </td>
+    </tr>
+  `;
+}
+
+function renderDetailPanel(issue) {
+  const a = issue.analysis;
+  if (!a) return '<div class="detail-panel"><em>No analysis available.</em></div>';
+
+  const tags = a.tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+
+  const components = (issue.jiraComponents ?? []);
+  const componentsHtml = components.length
+    ? components.map(c => `<span class="tag">${escHtml(c)}</span>`).join('')
+    : '<span style="color:#5e6c84; font-style:italic;">None set</span>';
+
+  let mismatchHtml = '';
+  const m = a.mismatches;
+  const mRows = [];
+  function addMRow(label, detail) {
+    mRows.push(`<tr>
+      <td>${label}</td>
+      <td class="jira-val">${escHtml(detail.jiraValue)}</td>
+      <td class="ai-val">${escHtml(detail.aiValue)}</td>
+      <td class="explanation">${escHtml(detail.explanation)}</td>
+    </tr>`);
+  }
+  if (m.priority)    addMRow('Priority',    m.priority);
+  if (m.category)    addMRow('Category',    m.category);
+  if (m.labels)      addMRow('Labels',      m.labels);
+  if (m.components)  addMRow('Components',  m.components);
+  if (m.summary)     addMRow('Summary',     m.summary);
+  if (mRows.length) {
+    mismatchHtml = `
+      <div class="detail-section">
+        <h4>Mismatches</h4>
+        <table class="mismatch-table">
+          <thead><tr><th>Field</th><th>Jira</th><th>AI Suggestion</th><th>Explanation</th></tr></thead>
+          <tbody>${mRows.join('')}</tbody>
+        </table>
+      </div>`;
+  }
+
+  const stalenessHtml = a.stalenessFlag
+    ? `<div class="detail-section"><h4>Staleness</h4><p>${escHtml(a.stalenessReason)}</p></div>`
+    : '';
+
+  const confidenceHtml = a.confidenceReason
+    ? `<div class="detail-section"><h4>Confidence: ${escHtml(a.confidence)}</h4><p>${escHtml(a.confidenceReason)}</p></div>`
+    : '';
+
+  return `
+    <div class="detail-panel">
+      <div class="detail-section">
+        <h4>AI Summary</h4>
+        <p>${escHtml(a.summary)}</p>
+      </div>
+      <div class="detail-section">
+        <h4>AI Tags</h4>
+        <div class="detail-tags">${tags}</div>
+      </div>
+      <div class="detail-section">
+        <h4>Jira Components</h4>
+        <div class="detail-tags">${componentsHtml}</div>
+      </div>
+      <div class="detail-section">
+        <h4>Recommended Action</h4>
+        <p><span class="action-badge ${actionClass(a.recommendedAction)}">${escHtml(a.recommendedAction)}</span>
+        — ${escHtml(a.recommendedActionReason)}</p>
+      </div>
+      ${confidenceHtml}
+      ${stalenessHtml}
+      ${mismatchHtml}
+      <div class="detail-section">
+        <h4>Notes</h4>
+        <textarea class="note-area" data-key="${escHtml(issue.key)}" placeholder="Add a note…">${escHtml(issue.note ?? '')}</textarea>
+        <div class="note-saved" id="note-saved-${escHtml(issue.key)}">✓ Saved</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderIssueTable(issues, opts = {}) {
+  const sorted = applySort(issues);
+  if (!sorted.length) {
+    return '<div class="empty-state"><h3>No issues</h3><p>No issues match the current filters.</p></div>';
+  }
+  const rows = sorted.map(i => renderIssueRow(i, opts)).join('');
+  return `
+    <table class="issue-table">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort="key">Key${sortIndicator('key')}</th>
+          <th class="sortable" data-sort="summary">Summary${sortIndicator('summary')}</th>
+          <th class="sortable" data-sort="category">Category${sortIndicator('category')}</th>
+          <th class="sortable" data-sort="impact">Impact${sortIndicator('impact')}</th>
+          <th class="sortable" data-sort="effort">Effort${sortIndicator('effort')}</th>
+          <th>Stale</th>
+          <th>Mismatch</th>
+          <th class="sortable" data-sort="action">Action${sortIndicator('action')}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+}
+
+// ──────────────────────────────────────────────
+// Tab renders
+// ──────────────────────────────────────────────
+function renderTriage() {
+  const actions = ['prioritize', 'needs-info', 'close', 'keep'];
+  const filterHtml = `
+    <div class="filter-bar">
+      <label>Action:</label>
+      ${actions.map(a => `
+        <button class="filter-btn ${triageActionFilters.size === 0 || triageActionFilters.has(a) ? 'active' : ''} triage-action-btn" data-action="${a}">${a}</button>
+      `).join('')}
+      <button class="filter-btn ${triageStaleOnly ? 'active' : ''}" id="stale-toggle">🕐 Stale only</button>
+      <button class="export-btn" id="export-triage">Export CSV</button>
+    </div>
+  `;
+
+  let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'ok' && !i.dismissed);
+  if (triageActionFilters.size > 0) {
+    issues = issues.filter(i => triageActionFilters.has(i.analysis?.recommendedAction));
+  }
+  if (triageStaleOnly) {
+    issues = issues.filter(i => i.analysis?.stalenessFlag);
+  }
+  issues = issues.filter(matchesSearch);
+  // Default sort by action; overridden by user column sort
+  if (!sortState.col) {
+    issues.sort((a, b) => actionOrder(a.analysis?.recommendedAction) - actionOrder(b.analysis?.recommendedAction));
+  }
+
+  return filterHtml + renderIssueTable(issues);
+}
+
+function renderMismatches() {
+  const mFields = ['priority', 'category', 'labels', 'components', 'summary'];
+  const filterHtml = `
+    <div class="filter-bar">
+      <label>Show mismatches in:</label>
+      ${mFields.map(f => `
+        <button class="filter-btn ${mismatchFilters.has(f) ? 'active' : ''} mismatch-filter-btn" data-field="${f}">${f}</button>
+      `).join('')}
+      <button class="export-btn" id="export-mismatches">Export CSV</button>
+    </div>
+  `;
+
+  let issues = (allData?.issues ?? []).filter(i => {
+    const m = i.analysis?.mismatches;
+    if (!m) return false;
+    return (mismatchFilters.has('priority')   && m.priority)   ||
+           (mismatchFilters.has('category')   && m.category)   ||
+           (mismatchFilters.has('labels')     && m.labels)     ||
+           (mismatchFilters.has('components') && m.components) ||
+           (mismatchFilters.has('summary')    && m.summary);
+  });
+  issues = issues.filter(matchesSearch);
+
+  return filterHtml + renderIssueTable(issues);
+}
+
+function renderCategory() {
+  const catOrder = ['bug', 'feature', 'tech-debt', 'question', 'chore', 'other'];
+  const issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'ok' && matchesSearch(i));
+
+  const byCategory = {};
+  for (const issue of issues) {
+    const cat = issue.analysis?.category ?? 'other';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(issue);
+  }
+
+  const cats = [...new Set([...catOrder, ...Object.keys(byCategory)])].filter(c => byCategory[c]);
+
+  if (!cats.length) {
+    return '<div class="empty-state"><h3>No categories</h3><p>Process some issues first.</p></div>';
+  }
+
+  return cats.map(cat => {
+    const items = byCategory[cat] ?? [];
+    return `
+      <div class="category-group open" data-cat="${escHtml(cat)}">
+        <div class="category-header">
+          <span class="category-chevron">▶</span>
+          <h3>${escHtml(cat)}</h3>
+          <span class="category-count">${items.length} issues</span>
+        </div>
+        <div class="category-body">
+          ${renderIssueTable(items)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderValue() {
+  const filterHtml = `
+    <div class="filter-bar">
+      <button class="filter-btn ${valueShowDismissed ? 'active' : ''}" id="value-dismissed-toggle">Include Dismissed</button>
+      <button class="export-btn" id="export-value">Export CSV</button>
+    </div>
+  `;
+
+  let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'ok');
+  if (!valueShowDismissed) issues = issues.filter(i => !i.dismissed);
+  issues = issues.filter(matchesSearch);
+  // Default sort by overall score; overridden by user column sort
+  if (!sortState.col) {
+    issues.sort((a, b) => (b.analysis?.buriedGemScore ?? 0) - (a.analysis?.buriedGemScore ?? 0));
+  }
+  const sorted = applySort(issues);
+
+  if (!sorted.length) {
+    return filterHtml + '<div class="empty-state"><h3>No issues</h3></div>';
+  }
+
+  const rows = sorted.map(issue => {
+    const a = issue.analysis;
+    const overallScore = a ? `<span class="overall-score">${a.buriedGemScore.toFixed(2)}</span>` : '—';
+    const staleIcon = a?.stalenessFlag ? `<span class="stale-icon" title="${escHtml(a.stalenessReason)}">🕐</span>` : '';
+    const mismatchIcon = hasMismatch(issue) ? `<span class="mismatch-icon">⚠️</span>` : '';
+    const isDismissed = issue.dismissed;
+    const dismissedCell = isDismissed
+      ? `<span class="dismissed-badge">dismissed</span> <button class="restore-btn" data-key="${escHtml(issue.key)}">Restore</button>`
+      : `<button class="dismiss-btn" data-key="${escHtml(issue.key)}">Dismiss</button>`;
+
+    return `
+      <tr class="${isDismissed ? 'dismissed' : ''}" data-key="${escHtml(issue.key)}">
+        <td><a class="key-link" href="${escHtml(issue.jiraLink)}" target="_blank" rel="noopener">${escHtml(issue.key)}</a></td>
+        <td>${escHtml(issue.jiraSummary)}</td>
+        <td>${escHtml(a?.category ?? '')}</td>
+        <td><span class="score ${scoreClass(a?.priorityScore ?? 0)}">${a?.priorityScore ?? '—'}</span></td>
+        <td><span class="effort-badge">${escHtml(a?.effort ?? '')}</span></td>
+        <td>${overallScore}</td>
+        <td>${staleIcon}</td>
+        <td>${mismatchIcon}</td>
+        <td>${dismissedCell}</td>
+      </tr>
+      <tr class="detail-row" data-key="${escHtml(issue.key)}" style="display:none">
+        <td colspan="9">${renderDetailPanel(issue)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return filterHtml + `
+    <table class="issue-table">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort="key">Key${sortIndicator('key')}</th>
+          <th class="sortable" data-sort="summary">Summary${sortIndicator('summary')}</th>
+          <th class="sortable" data-sort="category">Category${sortIndicator('category')}</th>
+          <th class="sortable" data-sort="impact">Impact${sortIndicator('impact')}</th>
+          <th class="sortable" data-sort="effort">Effort${sortIndicator('effort')}</th>
+          <th class="sortable" data-sort="overall">Overall Score${sortIndicator('overall')}</th>
+          <th>Stale</th><th>Mismatch</th><th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderErrors() {
+  let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'error');
+  issues = issues.filter(matchesSearch);
+
+  if (!issues.length) {
+    return '<div class="empty-state"><h3>No errors</h3><p>All issues processed successfully.</p></div>';
+  }
+
+  const rows = issues.map(i => `
+    <tr data-key="${escHtml(i.key)}">
+      <td><a class="key-link" href="${escHtml(i.jiraLink)}" target="_blank" rel="noopener">${escHtml(i.key)}</a></td>
+      <td>${escHtml(i.jiraSummary)}</td>
+      <td><span class="error-msg">${escHtml(i.error)}</span></td>
+      <td>${escHtml(i.processedAt ? new Date(i.processedAt).toLocaleDateString() : '')}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="filter-bar">
+      <button class="export-btn" id="export-errors">Export CSV</button>
+    </div>
+    <table class="issue-table">
+      <thead><tr><th>Key</th><th>Summary</th><th>Error</th><th>Date</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderPending() {
+  let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'pending');
+  issues = issues.filter(matchesSearch);
+
+  if (!issues.length) {
+    return '<div class="empty-state"><h3>No pending issues</h3><p>All fetched issues have been processed.</p></div>';
+  }
+
+  const rows = issues.map(i => `
+    <tr data-key="${escHtml(i.key)}">
+      <td><a class="key-link" href="${escHtml(i.jiraLink)}" target="_blank" rel="noopener">${escHtml(i.key)}</a></td>
+      <td>${escHtml(i.jiraSummary)}</td>
+      <td><span class="pending-label">${escHtml(i.jiraType)}</span></td>
+      <td>${escHtml(i.jiraPriority)}</td>
+      <td>${escHtml(i.jiraStatus)}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="filter-bar">
+      <button class="export-btn" id="export-pending">Export CSV</button>
+    </div>
+    <table class="issue-table">
+      <thead><tr><th>Key</th><th>Summary</th><th>Type</th><th>Priority</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+// ──────────────────────────────────────────────
+// Main render
+// ──────────────────────────────────────────────
+function render() {
+  if (!allData) return;
+
+  const content = document.getElementById('content');
+  let html = '';
+
+  switch (activeTab) {
+    case 'triage':     html = renderTriage(); break;
+    case 'mismatches': html = renderMismatches(); break;
+    case 'category':   html = renderCategory(); break;
+    case 'value':      html = renderValue(); break;
+    case 'errors':     html = renderErrors(); break;
+    case 'pending':    html = renderPending(); break;
+  }
+
+  content.innerHTML = html;
+  attachEventListeners();
+}
+
+// ──────────────────────────────────────────────
+// Event listeners (re-attached after each render)
+// ──────────────────────────────────────────────
+function attachEventListeners() {
+  // Row expand/collapse
+  document.querySelectorAll('.issue-table tbody tr[data-key]:not(.detail-row)').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('a') || e.target.closest('button') || e.target.closest('textarea')) return;
+      const key = row.dataset.key;
+      const detailRow = document.querySelector(`.detail-row[data-key="${CSS.escape(key)}"]`);
+      if (!detailRow) return;
+      const isOpen = detailRow.style.display !== 'none';
+      detailRow.style.display = isOpen ? 'none' : '';
+    });
+  });
+
+  // Sortable column headers
+  document.querySelectorAll('.issue-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (sortState.col === col) {
+        sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState.col = col;
+        sortState.dir = 'asc';
+      }
+      render();
+    });
+  });
+
+  // Dismiss / restore buttons
+  document.querySelectorAll('.dismiss-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const key = btn.dataset.key;
+      await postReview(key, { dismissed: true });
+      // Update local data
+      const issue = allData.issues.find(i => i.key === key);
+      if (issue) issue.dismissed = true;
+      updateBadges();
+      render();
+    });
+  });
+
+  document.querySelectorAll('.restore-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const key = btn.dataset.key;
+      await postReview(key, { dismissed: false });
+      const issue = allData.issues.find(i => i.key === key);
+      if (issue) issue.dismissed = false;
+      updateBadges();
+      render();
+    });
+  });
+
+  // Note autosave on blur
+  document.querySelectorAll('.note-area').forEach(ta => {
+    ta.addEventListener('blur', async () => {
+      const key = ta.dataset.key;
+      const note = ta.value;
+      await postReview(key, { note });
+      const issue = allData.issues.find(i => i.key === key);
+      if (issue) issue.note = note;
+      const savedEl = document.getElementById(`note-saved-${key}`);
+      if (savedEl) {
+        savedEl.style.display = 'block';
+        setTimeout(() => { savedEl.style.display = 'none'; }, 2000);
+      }
+    });
+  });
+
+  // Triage action filter buttons
+  document.querySelectorAll('.triage-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (triageActionFilters.has(action)) {
+        triageActionFilters.delete(action);
+      } else {
+        triageActionFilters.add(action);
+      }
+      render();
+    });
+  });
+
+  // Stale toggle
+  const staleToggle = document.getElementById('stale-toggle');
+  if (staleToggle) {
+    staleToggle.addEventListener('click', () => {
+      triageStaleOnly = !triageStaleOnly;
+      render();
+    });
+  }
+
+  // Mismatch filter buttons
+  document.querySelectorAll('.mismatch-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const field = btn.dataset.field;
+      if (mismatchFilters.has(field)) {
+        mismatchFilters.delete(field);
+      } else {
+        mismatchFilters.add(field);
+      }
+      render();
+    });
+  });
+
+  // Category expand/collapse
+  document.querySelectorAll('.category-header').forEach(header => {
+    header.addEventListener('click', () => {
+      header.closest('.category-group').classList.toggle('open');
+    });
+  });
+
+  // Value view dismissed toggle
+  const valueDismissedToggle = document.getElementById('value-dismissed-toggle');
+  if (valueDismissedToggle) {
+    valueDismissedToggle.addEventListener('click', () => {
+      valueShowDismissed = !valueShowDismissed;
+      render();
+    });
+  }
+
+  // Export CSV buttons
+  const exportMap = {
+    'export-triage': getTriageIssues,
+    'export-mismatches': getMismatchIssues,
+    'export-value': getValueIssues,
+    'export-errors': getErrorIssues,
+    'export-pending': getPendingIssues,
+  };
+  for (const [id, getter] of Object.entries(exportMap)) {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', () => exportCsv(getter()));
+  }
+}
+
+function getTriageIssues() {
+  let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'ok' && !i.dismissed);
+  if (triageActionFilters.size > 0) issues = issues.filter(i => triageActionFilters.has(i.analysis?.recommendedAction));
+  if (triageStaleOnly) issues = issues.filter(i => i.analysis?.stalenessFlag);
+  return issues.filter(matchesSearch);
+}
+function getMismatchIssues() {
+  return (allData?.issues ?? []).filter(i => {
+    const m = i.analysis?.mismatches;
+    if (!m) return false;
+    return (mismatchFilters.has('priority')   && m.priority)   ||
+           (mismatchFilters.has('category')   && m.category)   ||
+           (mismatchFilters.has('labels')     && m.labels)     ||
+           (mismatchFilters.has('components') && m.components) ||
+           (mismatchFilters.has('summary')    && m.summary);
+  }).filter(matchesSearch);
+}
+function getValueIssues() {
+  let issues = (allData?.issues ?? []).filter(i => i.resultStatus === 'ok');
+  if (!valueShowDismissed) issues = issues.filter(i => !i.dismissed);
+  return issues.filter(matchesSearch).sort((a, b) => (b.analysis?.buriedGemScore ?? 0) - (a.analysis?.buriedGemScore ?? 0));
+}
+function getErrorIssues() {
+  return (allData?.issues ?? []).filter(i => i.resultStatus === 'error').filter(matchesSearch);
+}
+function getPendingIssues() {
+  return (allData?.issues ?? []).filter(i => i.resultStatus === 'pending').filter(matchesSearch);
+}
+
+// ──────────────────────────────────────────────
+// API calls
+// ──────────────────────────────────────────────
+async function postReview(key, body) {
+  await fetch(`/api/reviews/${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+// ──────────────────────────────────────────────
+// CSV Export
+// ──────────────────────────────────────────────
+function exportCsv(issues) {
+  const headers = [
+    'Key', 'Summary', 'Category', 'Impact', 'Effort',
+    'Overall Score', 'Recommended Action', 'Stale', 'Mismatch Fields', 'Note'
+  ];
+  const rows = issues.map(i => {
+    const a = i.analysis;
+    const mismatchFields = a ? Object.entries(a.mismatches)
+      .filter(([, v]) => v != null)
+      .map(([k]) => k)
+      .join('|') : '';
+    return [
+      i.key,
+      i.jiraSummary,
+      a?.category ?? '',
+      a?.priorityScore ?? '',
+      a?.effort ?? '',
+      a?.buriedGemScore ?? '',
+      a?.recommendedAction ?? '',
+      a?.stalenessFlag ? 'yes' : 'no',
+      mismatchFields,
+      i.note ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+  });
+
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jira-triage-${activeTab}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ──────────────────────────────────────────────
+// Bootstrap
+// ──────────────────────────────────────────────
+init().catch(e => {
+  document.getElementById('content').innerHTML =
+    `<div class="empty-state"><h3>Error</h3><p>${e.message}</p></div>`;
+});
+
+})();
+</script>
+</body>
+</html>

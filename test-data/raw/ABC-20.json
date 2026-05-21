@@ -1,0 +1,36 @@
+{
+  "id": "10020",
+  "key": "ABC-20",
+  "fields": {
+    "summary": "Add two-factor authentication support",
+    "description": "Implement TOTP-based two-factor authentication (2FA) for user accounts. Users should be able to enable 2FA via an authenticator app (Google Authenticator, Authy).\n\nRequirements:\n- TOTP generation/verification\n- QR code enrollment flow\n- Backup codes\n- Remember device for 30 days",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["security", "auth", "2fa"],
+    "components": [{ "name": "Authentication" }],
+    "fixVersions": [{ "name": "v2.5" }],
+    "reporter": { "displayName": "Zoe Martinez" },
+    "assignee": null,
+    "created": "2024-06-10T08:00:00.000Z",
+    "updated": "2024-07-01T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Zoe Martinez" },
+          "body": "High demand from enterprise customers. Required for SOC 2 certification.",
+          "created": "2024-06-20T10:00:00.000Z"
+        },
+        {
+          "author": { "displayName": "Alex Brown" },
+          "body": "We can use the speakeasy library for TOTP generation.",
+          "created": "2024-07-01T10:00:00.000Z"
+        }
+      ],
+      "total": 2
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

@@ -1,0 +1,35 @@
+{
+  "key": "ABC-6",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Memory leak in websocket handler causes out-of-memory crashes",
+    "category": "bug",
+    "tags": [
+      "memory-leak",
+      "websocket",
+      "backend",
+      "crash"
+    ],
+    "priorityScore": 9,
+    "effort": "M",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "An OOM crash in a core infrastructure component (websocket handler) is a critical production stability issue that should be investigated and fixed immediately.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 4.5,
+    "confidence": "low",
+    "confidenceReason": "The issue has no description \u2014 the assessment is based entirely on the summary. The actual severity and scope are unknown without more context.",
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": {
+        "jiraValue": "(none)",
+        "aiValue": "memory-leak, websocket, backend, crash",
+        "explanation": "AI identified significant technical topics (memory-leak, websocket, crash) that are absent from Jira labels. Adding these would improve searchability."
+      },
+      "components": null,
+      "summary": null
+    }
+  }
+}

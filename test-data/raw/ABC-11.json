@@ -1,0 +1,22 @@
+{
+  "id": "10011",
+  "key": "ABC-11",
+  "fields": {
+    "summary": "Update",
+    "description": null,
+    "issuetype": { "name": "Task" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": [],
+    "components": [],
+    "fixVersions": [],
+    "reporter": { "displayName": "Peter Gibson" },
+    "assignee": null,
+    "created": "2024-08-01T08:00:00.000Z",
+    "updated": "2024-08-01T08:00:00.000Z",
+    "comment": { "comments": [], "total": 0 },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

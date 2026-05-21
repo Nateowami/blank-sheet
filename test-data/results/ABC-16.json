@@ -1,0 +1,31 @@
+{
+  "key": "ABC-16",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "CSV importer silently drops rows with Unicode/non-ASCII characters, affecting international users",
+    "category": "bug",
+    "tags": [
+      "import",
+      "internationalization",
+      "unicode",
+      "data-loss"
+    ],
+    "priorityScore": 7,
+    "effort": "S",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "Silent data loss during import is a serious bug \u2014 users may not notice that 40% of their data was skipped. This particularly affects non-English locales.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 7.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

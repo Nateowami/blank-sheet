@@ -1,0 +1,34 @@
+{
+  "key": "ABC-4",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Dashboard loading spinner doesn't hide after data loads, misleading users about app state",
+    "category": "bug",
+    "tags": [
+      "ui",
+      "frontend",
+      "ux"
+    ],
+    "priorityScore": 3,
+    "effort": "S",
+    "recommendedAction": "keep",
+    "recommendedActionReason": "This is a minor cosmetic bug with low user impact \u2014 data displays correctly underneath the spinner. It's worth fixing eventually but not urgent.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 3.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": {
+        "jiraValue": "Task",
+        "aiValue": "bug",
+        "explanation": "The issue describes incorrect UI behavior (spinner not hiding) which is a bug, not a planned Task. Jira issue type should be Bug."
+      },
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

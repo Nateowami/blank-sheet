@@ -1,0 +1,31 @@
+{
+  "key": "ABC-1",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Login fails with 500 error when password contains special characters due to missing input sanitization",
+    "category": "bug",
+    "tags": [
+      "auth",
+      "backend",
+      "security",
+      "input-validation"
+    ],
+    "priorityScore": 8,
+    "effort": "S",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "This is a reproducible authentication bug affecting all users with special characters in passwords. It should be fixed promptly as it blocks legitimate users from accessing the system.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 8.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

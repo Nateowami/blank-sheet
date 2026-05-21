@@ -1,0 +1,6 @@
+{
+  "key": "ABC-11",
+  "status": "error",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "error": "AI response was not valid JSON after 2 attempts. Issue description is empty and summary is insufficient for analysis."
+}

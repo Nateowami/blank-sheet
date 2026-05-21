@@ -1,0 +1,22 @@
+{
+  "id": "10018",
+  "key": "ABC-18",
+  "fields": {
+    "summary": "Document REST API authentication methods",
+    "description": "The REST API documentation is missing information about how to authenticate requests. We need to add documentation for:\n- API key authentication\n- OAuth 2.0 flow\n- JWT token expiry and refresh",
+    "issuetype": { "name": "Task" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["documentation", "api"],
+    "components": [{ "name": "Docs" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Xavier King" },
+    "assignee": null,
+    "created": "2024-03-10T08:00:00.000Z",
+    "updated": "2024-03-11T09:00:00.000Z",
+    "comment": { "comments": [], "total": 0 },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

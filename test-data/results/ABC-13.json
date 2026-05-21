@@ -1,0 +1,35 @@
+{
+  "key": "ABC-13",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Upgrade Node.js runtime from EOL v14 to current LTS v20 for security patch coverage",
+    "category": "tech-debt",
+    "tags": [
+      "infrastructure",
+      "dependencies",
+      "security",
+      "nodejs"
+    ],
+    "priorityScore": 7,
+    "effort": "M",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "Node.js 14 is past end-of-life and no longer receives security patches. Running an unsupported runtime is an ongoing security risk that should be resolved promptly.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 3.5,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": {
+        "jiraValue": "Task",
+        "aiValue": "tech-debt",
+        "explanation": "Upgrading a runtime dependency to address EOL and security patches is a tech-debt concern, not a general Task."
+      },
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

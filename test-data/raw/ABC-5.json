@@ -1,0 +1,31 @@
+{
+  "id": "10005",
+  "key": "ABC-5",
+  "fields": {
+    "summary": "How do I configure SAML SSO with Okta?",
+    "description": "We are trying to set up SAML SSO using Okta as the identity provider, but the documentation doesn't cover the attribute mapping step. Can you provide guidance or an example config?\n\nOur Okta tenant: company.okta.com",
+    "issuetype": { "name": "Question" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["saml", "sso", "okta"],
+    "components": [{ "name": "Authentication" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Grace Chen" },
+    "assignee": null,
+    "created": "2024-04-01T08:00:00.000Z",
+    "updated": "2024-04-03T11:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Support Team" },
+          "body": "Please check our documentation at docs.example.com/saml-okta",
+          "created": "2024-04-03T11:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

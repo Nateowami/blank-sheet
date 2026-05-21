@@ -1,0 +1,36 @@
+{
+  "id": "10001",
+  "key": "ABC-1",
+  "fields": {
+    "summary": "Login fails with 500 error when password contains special characters",
+    "description": "When users attempt to log in with passwords containing special characters such as &, <, >, or ', the server returns a 500 Internal Server Error. The issue was first reported by multiple users and reproduced consistently.\n\nSteps to reproduce:\n1. Navigate to login page\n2. Enter a valid email\n3. Enter a password containing & or < character\n4. Click Login\n\nExpected: Successful login\nActual: 500 error",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Critical" },
+    "labels": ["auth", "backend"],
+    "components": [{ "name": "Authentication" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Alice Johnson" },
+    "assignee": null,
+    "created": "2024-01-15T10:00:00.000Z",
+    "updated": "2024-03-10T14:30:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Bob Smith" },
+          "body": "Confirmed on production. Multiple users reported this.",
+          "created": "2024-01-16T09:00:00.000Z"
+        },
+        {
+          "author": { "displayName": "Alice Johnson" },
+          "body": "Root cause: input sanitization is not applied before passing to the auth service.",
+          "created": "2024-03-10T14:30:00.000Z"
+        }
+      ],
+      "total": 2
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

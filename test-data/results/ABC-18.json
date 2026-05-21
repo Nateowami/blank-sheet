@@ -1,0 +1,30 @@
+{
+  "key": "ABC-18",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "REST API documentation is missing authentication method descriptions (API key, OAuth, JWT)",
+    "category": "chore",
+    "tags": [
+      "documentation",
+      "api",
+      "auth"
+    ],
+    "priorityScore": 4,
+    "effort": "S",
+    "recommendedAction": "keep",
+    "recommendedActionReason": "Missing API authentication documentation is a developer experience issue but not urgent. It can be scheduled in a routine documentation sprint.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 4.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

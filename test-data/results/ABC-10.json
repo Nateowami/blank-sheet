@@ -1,0 +1,31 @@
+{
+  "key": "ABC-10",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "Real-time collaborative document editing using WebSockets and CRDT/OT algorithm",
+    "category": "feature",
+    "tags": [
+      "collaboration",
+      "websocket",
+      "realtime",
+      "architecture"
+    ],
+    "priorityScore": 7,
+    "effort": "XL",
+    "recommendedAction": "needs-info",
+    "recommendedActionReason": "This is a large architectural feature that needs proper scoping, team capacity planning, and a design document before it can be prioritized. A spike/design phase should be scheduled first.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 1.75,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

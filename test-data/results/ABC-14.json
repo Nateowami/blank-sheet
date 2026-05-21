@@ -1,0 +1,32 @@
+{
+  "key": "ABC-14",
+  "status": "ok",
+  "processedAt": "2024-12-01T01:00:00.000Z",
+  "analysis": {
+    "summary": "User profile page crashes on iOS mobile Safari due to missing optional chaining transpilation",
+    "category": "bug",
+    "tags": [
+      "mobile",
+      "safari",
+      "frontend",
+      "crash",
+      "compatibility"
+    ],
+    "priorityScore": 8,
+    "effort": "S",
+    "recommendedAction": "prioritize",
+    "recommendedActionReason": "This crash affects 15% of the user base on mobile Safari. The root cause is identified and the fix is straightforward (polyfill optional chaining). Enterprise iPad users are affected.",
+    "stalenessFlag": false,
+    "stalenessReason": null,
+    "buriedGemScore": 8.0,
+    "confidence": "high",
+    "confidenceReason": null,
+    "mismatches": {
+      "priority": null,
+      "category": null,
+      "labels": null,
+      "components": null,
+      "summary": null
+    }
+  }
+}

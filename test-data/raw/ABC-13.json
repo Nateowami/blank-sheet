@@ -1,0 +1,31 @@
+{
+  "id": "10013",
+  "key": "ABC-13",
+  "fields": {
+    "summary": "Upgrade Node.js from v14 to v20 LTS",
+    "description": "Node.js 14 reached end-of-life in April 2023. We need to upgrade to Node.js 20 LTS. This is a straightforward version bump that requires testing the existing suite and updating any deprecated APIs.",
+    "issuetype": { "name": "Task" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Major" },
+    "labels": ["infrastructure", "dependencies"],
+    "components": [{ "name": "Backend" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Rachel Evans" },
+    "assignee": null,
+    "created": "2023-05-01T08:00:00.000Z",
+    "updated": "2023-06-01T09:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Rachel Evans" },
+          "body": "Node 14 EOL means no security patches. This is a risk.",
+          "created": "2023-06-01T09:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}

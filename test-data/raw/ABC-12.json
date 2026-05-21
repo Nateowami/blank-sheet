@@ -1,0 +1,31 @@
+{
+  "id": "10012",
+  "key": "ABC-12",
+  "fields": {
+    "summary": "Rate limiting not enforced on public API endpoints",
+    "description": "The public REST API endpoints do not enforce rate limiting. Any client can make unlimited requests, which leaves us vulnerable to abuse and DoS attacks. We need to implement rate limiting per API key with configurable thresholds.\n\nProposed: 1000 requests/hour per API key, with 429 responses and Retry-After headers.",
+    "issuetype": { "name": "Bug" },
+    "status": { "name": "Open", "statusCategory": { "name": "To Do" } },
+    "priority": { "name": "Minor" },
+    "labels": ["security", "api"],
+    "components": [{ "name": "API" }],
+    "fixVersions": [],
+    "reporter": { "displayName": "Quinn Roberts" },
+    "assignee": null,
+    "created": "2024-09-01T08:00:00.000Z",
+    "updated": "2024-09-15T10:00:00.000Z",
+    "comment": {
+      "comments": [
+        {
+          "author": { "displayName": "Quinn Roberts" },
+          "body": "Security audit flagged this as high risk. A malicious actor could take down the service.",
+          "created": "2024-09-15T10:00:00.000Z"
+        }
+      ],
+      "total": 1
+    },
+    "issuelinks": [],
+    "parent": null
+  },
+  "_fetchedAt": "2024-12-01T00:00:00.000Z"
+}
