@@ -43,10 +43,6 @@ export function generateMarkdownSummary(
     ? `⚠️ **PII detected**\n\n`
     : "";
 
-  const piiNote = group.hasPII
-    ? `\n⚠️ This error group contains PII — sanitize before sharing.`
-    : "";
-
   return `# Error Report: ${title}
 
 **Group ID:** ${group._id}
@@ -75,6 +71,6 @@ ${projectFrames.map(formatStackFrame).join("\n")}
 ${mergeHistoryLines}
 
 ## Notes for Investigation
-${group.hasPII ? "⚠️ This error group contains PII — sanitize before sharing." : ""}${piiNote ? "" : "_No special notes._"}
+${group.hasPII ? "⚠️ This error group contains PII — sanitize before sharing." : "_No special notes._"}
 `;
 }

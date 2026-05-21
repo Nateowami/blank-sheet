@@ -103,7 +103,7 @@ async function handleRequest(req: Request): Promise<Response> {
   } catch (err) {
     console.error("[server] Unhandled error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error", detail: String(err) }),
+      JSON.stringify({ error: "Internal server error" }),
       {
         status: 500,
         headers: {
