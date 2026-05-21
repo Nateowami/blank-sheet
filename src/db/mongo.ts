@@ -3,7 +3,7 @@ import { config, env } from "../config.ts";
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
-export type { ObjectId };
+export { ObjectId };
 
 export interface StackFrame {
   file: string;
