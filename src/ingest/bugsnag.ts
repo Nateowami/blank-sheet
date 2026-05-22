@@ -35,9 +35,25 @@ export interface BugsnagEvent {
 
 const BASE_URL = "https://api.bugsnag.com";
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const url = `${BASE_URL}${path}`;
-  // eslint-disable-next-line no-constant-condition
+/**
+ * Parse the Link response header and return the URL for rel="next", or null.
+ * Bugsnag uses Link-header cursor pagination; offset-based pagination is not
+ * supported by the Events endpoint.
+ */
+function parseLinkNext(linkHeader: string | null): string | null {
+  if (!linkHeader) return null;
+  for (const part of linkHeader.split(",")) {
+    const urlMatch = part.match(/<([^>]+)>/);
+    const relMatch = part.match(/rel="([^"]+)"/);
+    if (urlMatch && relMatch && relMatch[1] === "next") {
+      return urlMatch[1];
+    }
+  }
+  return null;
+}
+
+async function apiFetch<T>(url: string): Promise<{ data: T; nextUrl: string | null }> {
+  // deno-lint-ignore no-constant-condition
   while (true) {
     const res = await fetch(url, {
       headers: {
@@ -54,33 +70,35 @@ async function apiFetch<T>(path: string): Promise<T> {
       const text = await res.text();
       throw new Error(`Bugsnag API ${res.status}: ${text}`);
     }
-    return res.json() as Promise<T>;
+    const data = await res.json() as T;
+    const nextUrl = parseLinkNext(res.headers.get("Link"));
+    return { data, nextUrl };
   }
 }
 
 /**
  * Fetch all events from Bugsnag for a project, yielding pages.
  * Stops when events older than `since` are encountered (they arrive newest-first).
+ *
+ * Note: Bugsnag's Events endpoint caps pages at 30 events regardless of the
+ * per_page parameter. Pagination follows the Link header returned with each
+ * response (cursor-based), not offset arithmetic.
  */
 export async function* fetchEventsSince(
   projectId: string,
   since: Date,
 ): AsyncGenerator<BugsnagEvent[]> {
   const perPage = config.bugsnag.pageSize;
-  let offset = 0;
-  let hasMore = true;
+  const initialParams = new URLSearchParams({
+    per_page: String(perPage),
+    sort: "timestamp",
+    direction: "desc",
+  });
+  let currentUrl: string | null =
+    `${BASE_URL}/projects/${projectId}/events?${initialParams}`;
 
-  while (hasMore) {
-    const params = new URLSearchParams({
-      per_page: String(perPage),
-      "page[offset]": String(offset),
-      sort: "timestamp",
-      direction: "desc",
-    });
-
-    const events = await apiFetch<BugsnagEvent[]>(
-      `/projects/${projectId}/events?${params}`,
-    );
+  while (currentUrl) {
+    const { data: events, nextUrl } = await apiFetch<BugsnagEvent[]>(currentUrl);
 
     if (!events || events.length === 0) break;
 
@@ -93,15 +111,12 @@ export async function* fetchEventsSince(
       yield newEvents;
     }
 
-    // If the last event in this page is older than since, stop paginating.
-    // Do NOT stop just because we received fewer items than perPage — the API
-    // may impose its own per-page cap that is smaller than our requested size.
+    // If the oldest event on this page is at or before our cursor, stop —
+    // everything from here onward is already accounted for.
     const oldest = new Date(events[events.length - 1].received_at);
-    if (oldest <= since) {
-      hasMore = false;
-    } else {
-      offset += events.length;
-    }
+    if (oldest <= since) break;
+
+    currentUrl = nextUrl;
   }
 }
 

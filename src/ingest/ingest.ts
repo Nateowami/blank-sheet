@@ -1,10 +1,12 @@
 import { config } from "../config.ts";
 import {
   eventsCollection,
+  rawEventsCollection,
   groupsCollection,
   ingestionStateCollection,
   ObjectId,
   type EventDoc,
+  type RawEventDoc,
 } from "../db/mongo.ts";
 import { fetchEventsSince, extractFirstException } from "./bugsnag.ts";
 import { normalizeMessage } from "../grouping/normalize.ts";
@@ -46,6 +48,7 @@ export async function runIngest(): Promise<void> {
     state = await stateCol.findOne({ projectId });
   }
 
+  const rawEvents = await rawEventsCollection();
   const events = await eventsCollection();
   const newEventIds: ObjectId[] = [];
   let totalFetched = 0;
@@ -66,32 +69,42 @@ export async function runIngest(): Promise<void> {
         latestReceivedAt = receivedAt;
       }
 
-      // Deduplication guard
-      const exists = await events.findOne({ bugsnagId: rawEvent.id });
+      // Deduplication guard — check raw events collection by Bugsnag's own ID.
+      const exists = await rawEvents.findOne({ id: rawEvent.id });
       if (exists) continue;
 
+      // Use the same ObjectId for both the raw event and its derived metadata so
+      // that the grouping pipeline's eventId references work across collections.
+      const oid = new ObjectId();
+
+      // 1. Store the raw Bugsnag event verbatim.
+      await rawEvents.insertOne({
+        _id: oid,
+        ingestedAt: new Date(),
+        ...(rawEvent as Record<string, unknown>),
+      } as RawEventDoc);
+
+      // 2. Store derived metadata for the grouping pipeline.
       const { errorClass, errorMessage, stacktrace } = extractFirstException(rawEvent);
       const normalizedMessage = normalizeMessage(errorMessage);
       const releaseStage = rawEvent.release_stage ?? rawEvent.app?.release_stage ?? "unknown";
 
       const doc: EventDoc = {
-        _id: new ObjectId(),
+        _id: oid,
         bugsnagId: rawEvent.id,
         projectId,
         receivedAt,
-        ingestedAt: new Date(),
         releaseStage,
         errorClass,
         errorMessage,
         normalizedMessage,
         stacktrace,
         user: rawEvent.user?.id ? { id: rawEvent.user.id } : null,
-        metadata: rawEvent.metaData ?? {},
         hasPII: null,
       };
 
       await events.insertOne(doc);
-      newEventIds.push(doc._id);
+      newEventIds.push(oid);
       totalInserted++;
       insertedThisPage++;
     }

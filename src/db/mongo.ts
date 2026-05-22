@@ -16,19 +16,28 @@ export interface StackFrame {
 
 // ─── Collection documents ─────────────────────────────────────────────────────
 
+/**
+ * A Bugsnag event stored verbatim as received from the API.
+ * Only `_id` (our MongoDB key) and `ingestedAt` are added by us; every other
+ * field is exactly what Bugsnag returned.
+ */
+export interface RawEventDoc {
+  _id: ObjectId;
+  ingestedAt: Date;
+  [key: string]: unknown;
+}
+
 export interface EventDoc {
   _id: ObjectId;
   bugsnagId: string;
   projectId: string;
   receivedAt: Date;
-  ingestedAt: Date;
   releaseStage: string;
   errorClass: string;
   errorMessage: string;
   normalizedMessage: string;
   stacktrace: StackFrame[];
   user: { id: string } | null;
-  metadata: Record<string, unknown>;
   hasPII: boolean | null;
 }
 
@@ -123,10 +132,16 @@ export async function closeDb(): Promise<void> {
 }
 
 async function createIndexes(db: Db): Promise<void> {
-  const events = db.collection("events");
-  await events.createIndex({ bugsnagId: 1 }, { unique: true });
-  await events.createIndex({ projectId: 1, receivedAt: -1 });
-  await events.createIndex({ normalizedMessage: 1 });
+  // Raw Bugsnag events stored verbatim — deduplicated by Bugsnag's own event ID.
+  const rawEvents = db.collection("events");
+  await rawEvents.createIndex({ id: 1 }, { unique: true });
+  await rawEvents.createIndex({ project_id: 1, received_at: -1 });
+
+  // Derived metadata used by the grouping pipeline and API layer.
+  const eventMeta = db.collection("event_metadata");
+  await eventMeta.createIndex({ bugsnagId: 1 }, { unique: true });
+  await eventMeta.createIndex({ projectId: 1, receivedAt: -1 });
+  await eventMeta.createIndex({ normalizedMessage: 1 });
 
   const groups = db.collection("groups");
   await groups.createIndex({ status: 1 });
@@ -146,9 +161,19 @@ async function createIndexes(db: Db): Promise<void> {
 
 // ─── Collection accessors ─────────────────────────────────────────────────────
 
+/** Raw Bugsnag events stored verbatim as received from the API. */
+export async function rawEventsCollection(): Promise<Collection<RawEventDoc>> {
+  const db = await getDb();
+  return db.collection<RawEventDoc>("events");
+}
+
+/**
+ * Derived event metadata used by the grouping pipeline and API layer.
+ * Each document shares its `_id` with the corresponding raw event document.
+ */
 export async function eventsCollection(): Promise<Collection<EventDoc>> {
   const db = await getDb();
-  return db.collection<EventDoc>("events");
+  return db.collection<EventDoc>("event_metadata");
 }
 
 export async function groupsCollection(): Promise<Collection<GroupDoc>> {
