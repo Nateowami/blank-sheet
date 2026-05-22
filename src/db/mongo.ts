@@ -84,6 +84,12 @@ export interface IngestionStateDoc {
   lastIngestedAt: Date;
   lastIngestRunAt: Date;
   totalEventsIngested: number;
+  /**
+   * Set at the start of each ingest run and cleared on successful completion.
+   * If present, a previous run was interrupted — the value is the `since` timestamp
+   * used to start that run, and the next run should resume from the same point.
+   */
+  inProgressSince?: Date | null;
 }
 
 export interface EventEmbeddingDoc {

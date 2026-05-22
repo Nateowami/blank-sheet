@@ -6,7 +6,7 @@ import {
   ObjectId,
   type EventDoc,
 } from "../db/mongo.ts";
-import { fetchEventsSince, extractFirstException, type BugsnagEvent } from "./bugsnag.ts";
+import { fetchEventsSince, extractFirstException } from "./bugsnag.ts";
 import { normalizeMessage } from "../grouping/normalize.ts";
 import { runGroupingPipeline } from "../grouping/pipeline.ts";
 
@@ -17,26 +17,61 @@ export async function runIngest(): Promise<void> {
   // Load ingestion state
   const stateCol = await ingestionStateCollection();
   let state = await stateCol.findOne({ projectId });
-  const since = state?.lastIngestedAt ?? new Date(0);
+
+  // If a previous run was interrupted, resume from the same `since` so we
+  // re-fetch (and dedup) already-stored pages and then continue where we left
+  // off. Otherwise start from the last completed cursor (or epoch for a fresh
+  // install).
+  const since = state?.inProgressSince ?? state?.lastIngestedAt ?? new Date(0);
   console.log(`[ingest] Fetching events since ${since.toISOString()}`);
+
+  // Mark this run as in-progress before fetching anything.
+  const runStartedAt = new Date();
+  if (state) {
+    if (!state.inProgressSince) {
+      await stateCol.updateOne(
+        { projectId },
+        { $set: { inProgressSince: since, lastIngestRunAt: runStartedAt } },
+      );
+    }
+  } else {
+    await stateCol.insertOne({
+      _id: new ObjectId(),
+      projectId,
+      lastIngestedAt: since,
+      lastIngestRunAt: runStartedAt,
+      totalEventsIngested: 0,
+      inProgressSince: since,
+    });
+    state = await stateCol.findOne({ projectId });
+  }
 
   const events = await eventsCollection();
   const newEventIds: ObjectId[] = [];
   let totalFetched = 0;
   let totalInserted = 0;
+  // Track the newest receivedAt seen across ALL events (including already-stored
+  // ones) so that latestReceivedAt is correct even when early pages are fully
+  // deduped during a resumed run.
   let latestReceivedAt = since;
 
   for await (const page of fetchEventsSince(projectId, since)) {
     totalFetched += page.length;
     let insertedThisPage = 0;
     for (const rawEvent of page) {
+      const receivedAt = new Date(rawEvent.received_at);
+
+      // Update the newest-seen cursor regardless of whether we insert this event.
+      if (receivedAt > latestReceivedAt) {
+        latestReceivedAt = receivedAt;
+      }
+
       // Deduplication guard
       const exists = await events.findOne({ bugsnagId: rawEvent.id });
       if (exists) continue;
 
       const { errorClass, errorMessage, stacktrace } = extractFirstException(rawEvent);
       const normalizedMessage = normalizeMessage(errorMessage);
-      const receivedAt = new Date(rawEvent.received_at);
       const releaseStage = rawEvent.release_stage ?? rawEvent.app?.release_stage ?? "unknown";
 
       const doc: EventDoc = {
@@ -59,32 +94,17 @@ export async function runIngest(): Promise<void> {
       newEventIds.push(doc._id);
       totalInserted++;
       insertedThisPage++;
-
-      if (receivedAt > latestReceivedAt) {
-        latestReceivedAt = receivedAt;
-      }
     }
 
-    // Persist progress after each page so a crash or rate-limit abort doesn't
-    // require re-fetching events we've already stored.
-    const now = new Date();
-    if (state) {
+    // Persist the insertion count after each page so progress is visible even
+    // during long runs. We intentionally do NOT update lastIngestedAt here —
+    // that cursor is only advanced once the full run completes so that a
+    // crashed/resumed run can always restart from the correct point.
+    if (insertedThisPage > 0) {
       await stateCol.updateOne(
         { projectId },
-        {
-          $set: { lastIngestedAt: latestReceivedAt, lastIngestRunAt: now },
-          $inc: { totalEventsIngested: insertedThisPage },
-        },
+        { $inc: { totalEventsIngested: insertedThisPage } },
       );
-    } else {
-      await stateCol.insertOne({
-        _id: new ObjectId(),
-        projectId,
-        lastIngestedAt: latestReceivedAt,
-        lastIngestRunAt: now,
-        totalEventsIngested: insertedThisPage,
-      });
-      state = await stateCol.findOne({ projectId });
     }
 
     console.log(
@@ -94,6 +114,15 @@ export async function runIngest(): Promise<void> {
 
   console.log(
     `[ingest] Done fetching. Inserted ${totalInserted} new events out of ${totalFetched} fetched.`,
+  );
+
+  // Mark run complete: advance the cursor and clear the in-progress marker.
+  await stateCol.updateOne(
+    { projectId },
+    {
+      $set: { lastIngestedAt: latestReceivedAt, lastIngestRunAt: new Date() },
+      $unset: { inProgressSince: "" },
+    },
   );
 
   if (newEventIds.length === 0) {
