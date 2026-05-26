@@ -330,7 +330,7 @@ async function main() {
   const githubToken = Deno.env.get("GITHUB_TOKEN");
   if (!githubToken) {
     console.error(
-      "Warning: GITHUB_TOKEN is not set. GitHub will rate-limit unauthenticated requests.",
+      "Warning: GITHUB_TOKEN is not set. Unauthenticated requests are limited to 60 per hour.",
     );
   }
 

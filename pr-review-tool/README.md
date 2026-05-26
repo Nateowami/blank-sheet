@@ -37,7 +37,7 @@ deno task run https://github.com/owner/repo/pull/42
 
 1. **Parses the PR URL** to extract the repository and PR number.
 2. **Fetches the PR** — title, description, changed files (with diffs), commits, comments, and reviews — from the GitHub REST API.
-3. **Extracts Jira issue keys** (`SF-NNNN` format) from the PR title.
+3. **Extracts Jira issue keys** (standard `PROJECT-NNNN` format, e.g. `SF-1234`) from the PR title.
 4. **Fetches each Jira issue** (including comments) from the Jira REST API, if keys are found and credentials are set.
 5. **Calls the LLM** with all gathered context and asks it to evaluate:
    - Does the PR implement everything in the Jira issue(s)?
