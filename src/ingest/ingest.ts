@@ -87,7 +87,7 @@ export async function runIngest(): Promise<void> {
       // 2. Store derived metadata for the grouping pipeline.
       const { errorClass, errorMessage, stacktrace } = extractFirstException(rawEvent);
       const normalizedMessage = normalizeMessage(errorMessage);
-      const releaseStage = rawEvent.release_stage ?? rawEvent.app?.release_stage ?? "unknown";
+      const releaseStage = rawEvent.app?.releaseStage ?? rawEvent.release_stage ?? "unknown";
 
       const doc: EventDoc = {
         _id: oid,

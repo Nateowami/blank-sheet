@@ -28,7 +28,7 @@ export interface BugsnagEvent {
   exceptions: BugsnagException[];
   user: BugsnagUser | null;
   metaData: Record<string, unknown>;
-  app?: { release_stage?: string };
+  app?: { releaseStage?: string };
 }
 
 // ─── API client ────────────────────────────────────────────────────────────────
