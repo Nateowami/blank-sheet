@@ -143,6 +143,7 @@ tr:hover td { background: var(--surface2); }
 .badge-prod { background: #1e3a5f; color: #93c5fd; }
 .badge-staging { background: #2d2a1e; color: #fcd34d; }
 .badge-qa { background: #1e3a2d; color: #86efac; }
+.badge-other { background: #2d2a1e; color: #fbbf24; }
 .badge-pii { background: #3b1f1f; color: #fca5a5; }
 .badge-pending { background: #2a2320; color: #fdba74; }
 

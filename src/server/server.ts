@@ -1,6 +1,6 @@
 import { config } from "../config.ts";
 import { handleDashboard } from "./api/dashboard.ts";
-import { handleListGroups, handleGetGroup, handleGroupSummary } from "./api/groups.ts";
+import { handleListGroups, handleGetGroup, handleGroupSummary, handleGetGroupEvents, handleGetReleaseStages } from "./api/groups.ts";
 import {
   handleListSuggestions,
   handleAcceptSuggestion,
@@ -57,9 +57,14 @@ async function handleRequest(req: Request): Promise<Response> {
       response = await handleDashboard(req);
     } else if (path === "/api/groups" && method === "GET") {
       response = await handleListGroups(req);
+    } else if (path === "/api/groups/release-stages" && method === "GET") {
+      response = await handleGetReleaseStages(req);
     } else if (path.match(/^\/api\/groups\/([^/]+)$/) && method === "GET") {
       const id = path.split("/")[3];
       response = await handleGetGroup(req, id);
+    } else if (path.match(/^\/api\/groups\/([^/]+)\/events$/) && method === "GET") {
+      const id = path.split("/")[3];
+      response = await handleGetGroupEvents(req, id);
     } else if (path.match(/^\/api\/groups\/([^/]+)\/summary$/) && method === "GET") {
       const id = path.split("/")[3];
       response = await handleGroupSummary(req, id);

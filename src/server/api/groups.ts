@@ -120,6 +120,59 @@ export async function handleGetGroup(
   });
 }
 
+// ─── Get group events (paginated) ─────────────────────────────────────────────
+
+export async function handleGetGroupEvents(
+  req: Request,
+  id: string,
+): Promise<Response> {
+  const groups = await groupsCollection();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return notFound();
+  }
+  const group = await groups.findOne({ _id: oid }, { projection: { eventIds: 1 } });
+  if (!group) return notFound();
+
+  const url = new URL(req.url);
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
+  const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+
+  const events = await eventsCollection();
+  const total = group.eventIds.length;
+  const skip = (page - 1) * limit;
+
+  // Fetch the slice of event IDs for this page, then look them up
+  const pageIds = group.eventIds.slice(skip, skip + limit);
+  const docs = await events
+    .find({ _id: { $in: pageIds } })
+    .sort({ receivedAt: -1 })
+    .toArray();
+
+  return json({
+    total,
+    page,
+    limit,
+    events: docs.map((e) => ({
+      _id: e._id,
+      errorMessage: e.errorMessage,
+      receivedAt: e.receivedAt,
+      releaseStage: e.releaseStage,
+      userId: e.user?.id ?? null,
+    })),
+  });
+}
+
+// ─── Get distinct release stages ───────────────────────────────────────────────
+
+export async function handleGetReleaseStages(_req: Request): Promise<Response> {
+  const groups = await groupsCollection();
+  const stages = await groups.distinct("releaseStages", { status: "active" });
+  return json((stages as string[]).sort());
+}
+
 // ─── Get group markdown summary ────────────────────────────────────────────────
 
 export async function handleGroupSummary(

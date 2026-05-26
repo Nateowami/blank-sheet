@@ -55,8 +55,8 @@ function fmtNum(n) {
 }
 
 function stageBadge(stage) {
-  const cls = stage === "production" ? "badge-prod" : stage === "staging" ? "badge-staging" : "badge-qa";
-  return `<span class="badge ${cls}">${stage}</span>`;
+  const cls = stage === "production" ? "badge-prod" : stage === "staging" ? "badge-staging" : stage === "qa" ? "badge-qa" : "badge-other";
+  return `<span class="badge ${cls}">${escHtml(stage)}</span>`;
 }
 
 function piiBadge(hasPII) {
@@ -127,6 +127,12 @@ async function loadDashboard() {
 async function loadGroups() {
   const el = document.getElementById("page-groups");
 
+  // Fetch distinct release stages for the filter
+  let releaseStageOptions = [];
+  try {
+    releaseStageOptions = await api("/api/groups/release-stages");
+  } catch (_) { /* fall back to empty list */ }
+
   const buildFiltersBar = () => `
     <div class="filters">
       <label>Sort:
@@ -146,9 +152,7 @@ async function loadGroups() {
       <label>Stage:
         <select id="stage-select">
           <option value="">All</option>
-          <option value="production" ${state.groupListFilters.releaseStage === "production" ? "selected" : ""}>production</option>
-          <option value="staging" ${state.groupListFilters.releaseStage === "staging" ? "selected" : ""}>staging</option>
-          <option value="qa" ${state.groupListFilters.releaseStage === "qa" ? "selected" : ""}>qa</option>
+          ${releaseStageOptions.map((s) => `<option value="${escHtml(s)}" ${state.groupListFilters.releaseStage === s ? "selected" : ""}>${escHtml(s)}</option>`).join("")}
         </select>
       </label>
       <label>PII:
@@ -304,6 +308,11 @@ async function loadGroupDetail(id) {
       <pre class="messages">${(data.exampleMessages || []).map(escHtml).join("\n\n")}</pre>
     </div>
 
+    <div class="card" id="group-events-card-${id}">
+      <h2>Events</h2>
+      <div id="group-events-${id}"><div class="loading">Loading…</div></div>
+    </div>
+
     <div class="card">
       <h2>Most Common Stack Trace</h2>
       ${stackHtml || '<div class="empty">No stack trace available</div>'}
@@ -331,6 +340,61 @@ async function loadGroupDetail(id) {
       if (el) { el.textContent = md; el.classList.remove("loading"); }
     })
     .catch(() => {});
+
+  // Load events list
+  loadGroupEvents(id, 1);
+}
+
+async function loadGroupEvents(id, page) {
+  const wrap = document.getElementById(`group-events-${id}`);
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="loading">Loading…</div>`;
+
+  const limit = 20;
+  let data;
+  try {
+    data = await api(`/api/groups/${id}/events?page=${page}&limit=${limit}`);
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">Error loading events: ${escHtml(e.message)}</div>`;
+    return;
+  }
+
+  if (data.total === 0) {
+    wrap.innerHTML = `<div class="empty">No events found.</div>`;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(data.total / limit));
+
+  wrap.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Received At</th>
+            <th>Stage</th>
+            <th>User</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.events.map((e) => `
+            <tr>
+              <td style="white-space:nowrap">${fmtDate(e.receivedAt)}</td>
+              <td>${stageBadge(e.releaseStage)}</td>
+              <td style="color:var(--text-muted)">${escHtml(e.userId ?? "—")}</td>
+              <td style="max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(e.errorMessage)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button class="btn-ghost btn-sm" onclick="loadGroupEvents('${id}', ${page - 1})" ${page <= 1 ? "disabled" : ""}>← Prev</button>
+      <span class="page-info">Page ${page} of ${totalPages} (${fmtNum(data.total)} events)</span>
+      <button class="btn-ghost btn-sm" onclick="loadGroupEvents('${id}', ${page + 1})" ${page >= totalPages ? "disabled" : ""}>Next →</button>
+    </div>
+  `;
 }
 
 async function copyMarkdown(id) {
