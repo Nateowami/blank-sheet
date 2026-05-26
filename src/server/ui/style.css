@@ -247,6 +247,22 @@ pre.messages {
 /* Back button */
 .back-btn { margin-bottom: 20px; }
 
+/* Nav stage filter */
+.nav-stage-filter {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+.nav-stage-filter label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.nav-stage-filter select { width: 100%; }
+
 /* Confidence badges */
 .conf-high { color: var(--success); font-weight: 600; }
 .conf-medium { color: var(--warning); font-weight: 600; }

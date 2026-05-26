@@ -53,21 +53,52 @@ export async function handleListGroups(req: Request): Promise<Response> {
     .limit(limit)
     .toArray();
 
+  // When filtering by release stage, compute per-stage event/user counts dynamically
+  // because the stored aggregates cover all stages.
+  let stageCounts: Map<string, { count: number; users: Set<string> }> | null = null;
+  if (releaseStage && docs.length > 0) {
+    const eventsCol = await eventsCollection();
+    const allEventIds = docs.flatMap((g) => g.eventIds);
+    const eventToGroup = new Map<string, string>();
+    for (const g of docs) {
+      for (const eid of g.eventIds) {
+        eventToGroup.set(eid.toString(), g._id.toString());
+      }
+    }
+    const matchingEvents = await eventsCol
+      .find({ _id: { $in: allEventIds }, releaseStage })
+      .project<{ _id: ObjectId; user: { id: string } | null }>({ _id: 1, user: 1 })
+      .toArray();
+
+    stageCounts = new Map();
+    for (const e of matchingEvents) {
+      const gid = eventToGroup.get(e._id.toString());
+      if (!gid) continue;
+      if (!stageCounts.has(gid)) stageCounts.set(gid, { count: 0, users: new Set() });
+      const entry = stageCounts.get(gid)!;
+      entry.count++;
+      if (e.user?.id) entry.users.add(e.user.id);
+    }
+  }
+
   return json({
     total,
     page,
     limit,
-    groups: docs.map((g) => ({
-      _id: g._id,
-      label: g.template ?? g.exampleMessages[0] ?? "Unknown",
-      template: g.template,
-      firstSeenAt: g.firstSeenAt,
-      lastSeenAt: g.lastSeenAt,
-      eventCount: g.eventCount,
-      uniqueUserCount: g.uniqueUserCount,
-      releaseStages: g.releaseStages,
-      hasPII: g.hasPII,
-    })),
+    groups: docs.map((g) => {
+      const sc = stageCounts?.get(g._id.toString());
+      return {
+        _id: g._id,
+        label: g.template ?? g.exampleMessages[0] ?? "Unknown",
+        template: g.template,
+        firstSeenAt: g.firstSeenAt,
+        lastSeenAt: g.lastSeenAt,
+        eventCount: sc ? sc.count : g.eventCount,
+        uniqueUserCount: sc ? sc.users.size : g.uniqueUserCount,
+        releaseStages: g.releaseStages,
+        hasPII: g.hasPII,
+      };
+    }),
   });
 }
 

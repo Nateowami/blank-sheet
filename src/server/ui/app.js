@@ -676,5 +676,27 @@ document.addEventListener("DOMContentLoaded", () => {
       navigate(a.dataset.page);
     });
   });
+
+  // Populate global stage selector from live data
+  api("/api/groups/release-stages")
+    .then((stages) => {
+      const sel = document.getElementById("global-stage-select");
+      if (!sel) return;
+      for (const s of stages) {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        if (state.releaseStage === s) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    })
+    .catch(() => {});
+
+  document.getElementById("global-stage-select")?.addEventListener("change", (e) => {
+    state.releaseStage = e.target.value || null;
+    if (state.currentPage === "dashboard") loadDashboard();
+    else if (state.currentPage === "trends") renderTrends();
+  });
+
   navigate("dashboard");
 });
