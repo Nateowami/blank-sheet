@@ -311,10 +311,14 @@ export async function runGroupingPipeline(newEventIds: ObjectId[]): Promise<void
 
   const newGroups: GroupDoc[] = [];
 
+  // One embedding cache per pipeline run: avoids calling the model more than
+  // once for events that share the same normalizedMessage.
+  const messageEmbeddingCache = new Map<string, number[]>();
+
   for (const event of remaining) {
     let embedding: number[];
     try {
-      embedding = await getOrComputeEventEmbedding(event);
+      embedding = await getOrComputeEventEmbedding(event, messageEmbeddingCache);
     } catch (err) {
       console.error(`[pipeline] Embedding failed for event ${event._id}:`, err);
       continue;

@@ -25,15 +25,24 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 /**
  * Get (or compute and store) the embedding for a single event.
+ *
+ * Pass a `messageCache` (keyed by normalizedMessage) to avoid calling the
+ * embedding model more than once for the same message text within a single
+ * pipeline run.
  */
 export async function getOrComputeEventEmbedding(
   event: EventDoc,
+  messageCache?: Map<string, number[]>,
 ): Promise<number[]> {
   const col = await eventEmbeddingsCollection();
   const existing = await col.findOne({ eventId: event._id });
   if (existing) return existing.embedding;
 
-  const embedding = await getEmbedding(event.normalizedMessage);
+  // Re-use a cached embedding for the same message text without a model call.
+  const cached = messageCache?.get(event.normalizedMessage);
+  const embedding = cached ?? await getEmbedding(event.normalizedMessage);
+  if (!cached) messageCache?.set(event.normalizedMessage, embedding);
+
   await col.insertOne({
     _id: new ObjectId(),
     eventId: event._id,
