@@ -1,4 +1,4 @@
-import { eventsCollection, groupsCollection, mergeSuggestionsCollection } from "../../db/mongo.ts";
+import { eventsCollection, groupsCollection, mergeSuggestionsCollection, ObjectId } from "../../db/mongo.ts";
 
 export async function handleDashboard(req: Request): Promise<Response> {
   const url = new URL(req.url);
@@ -9,7 +9,6 @@ export async function handleDashboard(req: Request): Promise<Response> {
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const stageFilter = releaseStage ? { releaseStage } : {};
 
@@ -65,12 +64,69 @@ export async function handleDashboard(req: Request): Promise<Response> {
     count: d.count as number,
   }));
 
-  // Top 5 most active groups last 7 days
-  const top5Groups = await groups
-    .find(groupStageFilter)
-    .sort({ eventCount: -1 })
-    .limit(5)
-    .toArray();
+  // Top 5 most active groups - stage-accurate when a filter is applied.
+  let top5Groups;
+  if (releaseStage) {
+    // Fetch all groups with this stage so we can rank by stage-specific event count.
+    const candidates = await groups
+      .find(groupStageFilter)
+      .project<{
+        _id: ObjectId;
+        eventIds: ObjectId[];
+        template: string | null;
+        exampleMessages: string[];
+        lastSeenAt: Date;
+        firstSeenAt: Date;
+        releaseStages: string[];
+        hasPII: boolean | null;
+      }>({
+        _id: 1, eventIds: 1, template: 1, exampleMessages: 1,
+        lastSeenAt: 1, firstSeenAt: 1, releaseStages: 1, hasPII: 1,
+      })
+      .toArray();
+
+    const allEventIds = candidates.flatMap((g) => g.eventIds);
+    const eventToGroup = new Map<string, string>();
+    for (const g of candidates) {
+      for (const eid of g.eventIds) {
+        eventToGroup.set(eid.toString(), g._id.toString());
+      }
+    }
+    const matchingEvents = await events
+      .find({ _id: { $in: allEventIds }, releaseStage })
+      .project<{ _id: ObjectId; user: { id: string } | null }>({ _id: 1, user: 1 })
+      .toArray();
+
+    const stageCounts = new Map<string, { count: number; users: Set<string> }>();
+    for (const e of matchingEvents) {
+      const gid = eventToGroup.get(e._id.toString());
+      if (!gid) continue;
+      if (!stageCounts.has(gid)) stageCounts.set(gid, { count: 0, users: new Set() });
+      const entry = stageCounts.get(gid)!;
+      entry.count++;
+      if (e.user?.id) entry.users.add(e.user.id);
+    }
+
+    top5Groups = [...candidates]
+      .sort((a, b) => (stageCounts.get(b._id.toString())?.count ?? 0) - (stageCounts.get(a._id.toString())?.count ?? 0))
+      .slice(0, 5)
+      .map((g) => ({
+        _id: g._id,
+        label: g.template ?? g.exampleMessages[0] ?? "Unknown",
+        eventCount: stageCounts.get(g._id.toString())?.count ?? 0,
+        uniqueUserCount: stageCounts.get(g._id.toString())?.users.size ?? 0,
+        lastSeenAt: g.lastSeenAt,
+        firstSeenAt: g.firstSeenAt,
+        releaseStages: g.releaseStages,
+        hasPII: g.hasPII,
+      }));
+  } else {
+    top5Groups = (await groups
+      .find(groupStageFilter)
+      .sort({ eventCount: -1 })
+      .limit(5)
+      .toArray()).map(summarizeGroup);
+  }
 
   // Pending merge suggestions count
   const suggestionsCol = await mergeSuggestionsCollection();
@@ -82,7 +138,7 @@ export async function handleDashboard(req: Request): Promise<Response> {
     totalActiveGroups,
     uniqueUsersLast30d,
     eventsPerDay,
-    top5Groups: top5Groups.map(summarizeGroup),
+    top5Groups,
     pendingSuggestions,
   });
 }

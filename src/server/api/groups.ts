@@ -45,22 +45,32 @@ export async function handleListGroups(req: Request): Promise<Response> {
   };
   const sortField = validSortFields[sortBy] ?? "eventCount";
 
-  const total = await groups.countDocuments(filter);
-  const docs = await groups
-    .find(filter)
-    .sort({ [sortField]: direction })
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .toArray();
+  // When filtering by release stage, stored aggregates (eventCount, uniqueUserCount)
+  // cover all stages, so we must compute counts from raw events and sort in memory.
+  if (releaseStage) {
+    // Fetch all matching groups — only the fields we need for display + eventIds for counting.
+    const allDocs = await groups
+      .find(filter)
+      .project<{
+        _id: ObjectId;
+        eventIds: ObjectId[];
+        template: string | null;
+        exampleMessages: string[];
+        lastSeenAt: Date;
+        firstSeenAt: Date;
+        releaseStages: string[];
+        hasPII: boolean | null;
+      }>({
+        _id: 1, eventIds: 1, template: 1, exampleMessages: 1,
+        lastSeenAt: 1, firstSeenAt: 1, releaseStages: 1, hasPII: 1,
+      })
+      .toArray();
 
-  // When filtering by release stage, compute per-stage event/user counts dynamically
-  // because the stored aggregates cover all stages.
-  let stageCounts: Map<string, { count: number; users: Set<string> }> | null = null;
-  if (releaseStage && docs.length > 0) {
+    // Compute per-group event/user counts for this stage in one batch query.
     const eventsCol = await eventsCollection();
-    const allEventIds = docs.flatMap((g) => g.eventIds);
+    const allEventIds = allDocs.flatMap((g) => g.eventIds);
     const eventToGroup = new Map<string, string>();
-    for (const g of docs) {
+    for (const g of allDocs) {
       for (const eid of g.eventIds) {
         eventToGroup.set(eid.toString(), g._id.toString());
       }
@@ -70,7 +80,7 @@ export async function handleListGroups(req: Request): Promise<Response> {
       .project<{ _id: ObjectId; user: { id: string } | null }>({ _id: 1, user: 1 })
       .toArray();
 
-    stageCounts = new Map();
+    const stageCounts = new Map<string, { count: number; users: Set<string> }>();
     for (const e of matchingEvents) {
       const gid = eventToGroup.get(e._id.toString());
       if (!gid) continue;
@@ -79,26 +89,74 @@ export async function handleListGroups(req: Request): Promise<Response> {
       entry.count++;
       if (e.user?.id) entry.users.add(e.user.id);
     }
+
+    // Sort in memory using the stage-accurate values.
+    const sorted = [...allDocs].sort((a, b) => {
+      let aVal: number, bVal: number;
+      if (sortBy === "eventCount") {
+        aVal = stageCounts.get(a._id.toString())?.count ?? 0;
+        bVal = stageCounts.get(b._id.toString())?.count ?? 0;
+      } else if (sortBy === "userCount") {
+        aVal = stageCounts.get(a._id.toString())?.users.size ?? 0;
+        bVal = stageCounts.get(b._id.toString())?.users.size ?? 0;
+      } else if (sortBy === "lastSeenAt") {
+        aVal = a.lastSeenAt.getTime();
+        bVal = b.lastSeenAt.getTime();
+      } else {
+        aVal = a.firstSeenAt.getTime();
+        bVal = b.firstSeenAt.getTime();
+      }
+      return direction === 1 ? aVal - bVal : bVal - aVal;
+    });
+
+    const total = sorted.length;
+    const pageDocs = sorted.slice((page - 1) * limit, page * limit);
+
+    return json({
+      total,
+      page,
+      limit,
+      groups: pageDocs.map((g) => {
+        const sc = stageCounts.get(g._id.toString());
+        return {
+          _id: g._id,
+          label: g.template ?? g.exampleMessages[0] ?? "Unknown",
+          template: g.template,
+          firstSeenAt: g.firstSeenAt,
+          lastSeenAt: g.lastSeenAt,
+          eventCount: sc?.count ?? 0,
+          uniqueUserCount: sc?.users.size ?? 0,
+          releaseStages: g.releaseStages,
+          hasPII: g.hasPII,
+        };
+      }),
+    });
   }
+
+  // No stage filter — use MongoDB sort and pagination directly.
+  const total = await groups.countDocuments(filter);
+  const docs = await groups
+    .find(filter)
+    .sort({ [sortField]: direction })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .toArray();
 
   return json({
     total,
     page,
     limit,
-    groups: docs.map((g) => {
-      const sc = stageCounts?.get(g._id.toString());
-      return {
-        _id: g._id,
-        label: g.template ?? g.exampleMessages[0] ?? "Unknown",
-        template: g.template,
-        firstSeenAt: g.firstSeenAt,
-        lastSeenAt: g.lastSeenAt,
-        eventCount: sc ? sc.count : g.eventCount,
-        uniqueUserCount: sc ? sc.users.size : g.uniqueUserCount,
-        releaseStages: g.releaseStages,
-        hasPII: g.hasPII,
-      };
-    }),
+    groups: docs.map((g) => ({
+      _id: g._id,
+      label: g.template ?? g.exampleMessages[0] ?? "Unknown",
+      template: g.template,
+      firstSeenAt: g.firstSeenAt,
+      lastSeenAt: g.lastSeenAt,
+      eventCount: g.eventCount,
+      uniqueUserCount: g.uniqueUserCount,
+      releaseStages: g.releaseStages,
+      hasPII: g.hasPII,
+    })),
   });
 }
 
