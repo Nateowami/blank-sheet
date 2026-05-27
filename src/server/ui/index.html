@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bugsnag Error Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <nav>
+    <div class="logo">🐛 Bugsnag Tool</div>
+    <a href="#" data-page="dashboard">📊 Dashboard</a>
+    <a href="#" data-page="groups">📋 Groups</a>
+    <a href="#" data-page="merge-suggestions">🔀 Merge Suggestions</a>
+    <a href="#" data-page="merge-history">📜 Merge History</a>
+    <a href="#" data-page="trends">📈 Trends</a>
+    <div class="nav-stage-filter">
+      <label for="global-stage-select">Stage</label>
+      <select id="global-stage-select">
+        <option value="">All stages</option>
+      </select>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Dashboard -->
+    <div id="page-dashboard" class="page"></div>
+
+    <!-- Groups list -->
+    <div id="page-groups" class="page"></div>
+
+    <!-- Group detail (hidden page, navigated to programmatically) -->
+    <div id="page-group-detail" class="page"></div>
+
+    <!-- Merge suggestions -->
+    <div id="page-merge-suggestions" class="page"></div>
+
+    <!-- Merge history -->
+    <div id="page-merge-history" class="page"></div>
+
+    <!-- Trends -->
+    <div id="page-trends" class="page"></div>
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

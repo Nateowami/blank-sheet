@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "ingest": "deno run --allow-net --allow-read --allow-env --allow-write main.ts ingest",
+    "serve": "deno run --allow-net --allow-read --allow-env --allow-write main.ts serve"
+  },
+  "imports": {
+    "mongodb": "npm:mongodb@^6.3.0",
+    "@std/dotenv": "jsr:@std/dotenv@^0.224.0",
+    "@std/path": "jsr:@std/path@^0.224.0"
+  }
+}
