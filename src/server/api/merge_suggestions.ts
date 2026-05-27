@@ -22,35 +22,42 @@ export async function handleListSuggestions(_req: Request): Promise<Response> {
 
   const pending = await suggestions.find({ status: "pending" }).sort({ createdAt: -1 }).toArray();
 
-  const result = await Promise.all(
-    pending.map(async (s) => {
-      const [gA, gB] = await Promise.all([
-        groups.findOne({ _id: s.groupIdA }),
-        groups.findOne({ _id: s.groupIdB }),
-      ]);
-      return {
-        _id: s._id,
-        createdAt: s.createdAt,
-        similarityScore: s.similarityScore,
-        llmReasoning: s.llmReasoning,
-        llmConfidence: s.llmConfidence,
-        groupA: gA
-          ? {
-              _id: gA._id,
-              label: gA.template ?? gA.exampleMessages[0] ?? "Unknown",
-              eventCount: gA.eventCount,
-            }
-          : null,
-        groupB: gB
-          ? {
-              _id: gB._id,
-              label: gB.template ?? gB.exampleMessages[0] ?? "Unknown",
-              eventCount: gB.eventCount,
-            }
-          : null,
-      };
-    }),
-  );
+  // Collect all unique group IDs and fetch them in a single query.
+  const groupIdSet = new Set<string>();
+  for (const s of pending) {
+    groupIdSet.add(s.groupIdA.toString());
+    groupIdSet.add(s.groupIdB.toString());
+  }
+  const groupDocs = await groups
+    .find({ _id: { $in: [...groupIdSet].map((id) => new ObjectId(id)) } })
+    .toArray();
+  const groupMap = new Map(groupDocs.map((g) => [g._id.toString(), g]));
+
+  const result = pending.map((s) => {
+    const gA = groupMap.get(s.groupIdA.toString()) ?? null;
+    const gB = groupMap.get(s.groupIdB.toString()) ?? null;
+    return {
+      _id: s._id,
+      createdAt: s.createdAt,
+      similarityScore: s.similarityScore,
+      llmReasoning: s.llmReasoning,
+      llmConfidence: s.llmConfidence,
+      groupA: gA
+        ? {
+            _id: gA._id,
+            label: gA.template ?? gA.exampleMessages[0] ?? "Unknown",
+            eventCount: gA.eventCount,
+          }
+        : null,
+      groupB: gB
+        ? {
+            _id: gB._id,
+            label: gB.template ?? gB.exampleMessages[0] ?? "Unknown",
+            eventCount: gB.eventCount,
+          }
+        : null,
+    };
+  });
 
   return json(result);
 }

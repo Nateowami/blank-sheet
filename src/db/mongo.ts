@@ -142,11 +142,15 @@ async function createIndexes(db: Db): Promise<void> {
   await eventMeta.createIndex({ bugsnagId: 1 }, { unique: true });
   await eventMeta.createIndex({ projectId: 1, receivedAt: -1 });
   await eventMeta.createIndex({ normalizedMessage: 1 });
+  await eventMeta.createIndex({ releaseStage: 1 });
+  await eventMeta.createIndex({ releaseStage: 1, receivedAt: -1 });
 
   const groups = db.collection("groups");
   await groups.createIndex({ status: 1 });
-  await groups.createIndex({ eventCount: -1 });
-  await groups.createIndex({ lastSeenAt: -1 });
+  await groups.createIndex({ status: 1, eventCount: -1 });
+  await groups.createIndex({ status: 1, lastSeenAt: -1 });
+  await groups.createIndex({ status: 1, firstSeenAt: -1 });
+  await groups.createIndex({ status: 1, releaseStages: 1, eventCount: -1 });
 
   const suggestions = db.collection("merge_suggestions");
   await suggestions.createIndex({ status: 1 });

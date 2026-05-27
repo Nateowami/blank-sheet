@@ -181,14 +181,26 @@ export async function handleGetGroup(
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
   const events = await eventsCollection();
-  const lastSevenCount = await events.countDocuments({
-    _id: { $in: group.eventIds },
-    receivedAt: { $gte: sevenDaysAgo },
-  });
-  const priorSevenCount = await events.countDocuments({
-    _id: { $in: group.eventIds },
-    receivedAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo },
-  });
+  const [trendResult] = await events
+    .aggregate([
+      { $match: { _id: { $in: group.eventIds }, receivedAt: { $gte: fourteenDaysAgo } } },
+      {
+        $facet: {
+          lastSeven: [
+            { $match: { receivedAt: { $gte: sevenDaysAgo } } },
+            { $count: "n" },
+          ],
+          priorSeven: [
+            { $match: { receivedAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo } } },
+            { $count: "n" },
+          ],
+        },
+      },
+    ])
+    .toArray();
+
+  const lastSevenCount: number = trendResult?.lastSeven?.[0]?.n ?? 0;
+  const priorSevenCount: number = trendResult?.priorSeven?.[0]?.n ?? 0;
 
   let trend: string;
   if (lastSevenCount > priorSevenCount * 1.1) trend = "↑ Increasing";
@@ -282,14 +294,26 @@ export async function handleGroupSummary(
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  const lastSevenCount = await events.countDocuments({
-    _id: { $in: group.eventIds },
-    receivedAt: { $gte: sevenDaysAgo },
-  });
-  const priorSevenCount = await events.countDocuments({
-    _id: { $in: group.eventIds },
-    receivedAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo },
-  });
+  const [trendResult] = await events
+    .aggregate([
+      { $match: { _id: { $in: group.eventIds }, receivedAt: { $gte: fourteenDaysAgo } } },
+      {
+        $facet: {
+          lastSeven: [
+            { $match: { receivedAt: { $gte: sevenDaysAgo } } },
+            { $count: "n" },
+          ],
+          priorSeven: [
+            { $match: { receivedAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo } } },
+            { $count: "n" },
+          ],
+        },
+      },
+    ])
+    .toArray();
+
+  const lastSevenCount: number = trendResult?.lastSeven?.[0]?.n ?? 0;
+  const priorSevenCount: number = trendResult?.priorSeven?.[0]?.n ?? 0;
 
   const md = generateMarkdownSummary(group, lastSevenCount, priorSevenCount);
   return new Response(md, { headers: { "Content-Type": "text/plain" } });
